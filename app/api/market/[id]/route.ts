@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const res = await fetch(
-      `https://gamma-api.polymarket.com/markets?id=${params.id}`,
+      `https://gamma-api.polymarket.com/markets?id=${id}`,
       { cache: 'no-store' }
     );
     const data = await res.json();

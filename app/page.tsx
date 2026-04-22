@@ -56,14 +56,13 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen text-white" style={{ backgroundColor: '#0d0a1a' }}>
       <div className="max-w-3xl mx-auto px-4 py-6">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-purple-500 rounded" />
-            <span className="font-medium text-lg">Foresight</span>
+            <img src="/ForeSight Logo copy.png" alt="Foresight" className="h-8 w-auto" />
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full">
@@ -125,6 +124,7 @@ export default function Home() {
                     key={market.id}
                     onClick={() => window.location.href = `/market/${market.id}`}
                     className="border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all cursor-pointer"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <p className="text-sm font-medium leading-snug">{market.question}</p>
@@ -160,6 +160,7 @@ export default function Home() {
                     key={signal.id}
                     onClick={() => window.location.href = `/market/${signal.id}`}
                     className="border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all cursor-pointer"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <p className="text-sm font-medium leading-snug">{signal.question}</p>
