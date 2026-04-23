@@ -26,21 +26,18 @@ export default function MarketPage() {
   useEffect(() => {
     fetch(`/api/market/${id}`)
       .then(res => res.json())
-      .then(data => {
-        if (data.market) setMarket(data.market);
-        setLoading(false);
-      })
+      .then(data => { setMarket(data.market); setLoading(false); })
       .catch(() => setLoading(false));
   }, [id]);
 
   if (loading) return (
-    <main className="min-h-screen text-white flex items-center justify-center" style={{ backgroundColor: '#0d0a1a' }}>
+    <main className="min-h-screen bg-black text-white flex items-center justify-center">
       <p className="text-white/40 text-sm">Loading market...</p>
     </main>
   );
 
   if (!market) return (
-    <main className="min-h-screen text-white flex items-center justify-center" style={{ backgroundColor: '#0d0a1a' }}>
+    <main className="min-h-screen bg-black text-white flex items-center justify-center">
       <p className="text-white/40 text-sm">Market not found.</p>
     </main>
   );
@@ -55,13 +52,12 @@ export default function MarketPage() {
   ];
 
   return (
-    <main className="min-h-screen text-white" style={{ backgroundColor: '#0d0a1a' }}>
+    <main className="min-h-screen bg-black text-white">
       <div className="max-w-3xl mx-auto px-4 py-6">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <img src="/ForeSight Logo copy.png" alt="Foresight" className="h-8 w-auto" />
+          <div className="flex items-center gap-2">
             <button onClick={() => router.push('/')} className="text-white/40 hover:text-white text-sm transition-all">
               ← Back
             </button>
@@ -75,21 +71,14 @@ export default function MarketPage() {
           </div>
         </div>
 
-        {/* Connected wallet banner */}
-        {connected && publicKey && (
-          <div className="mb-4 px-4 py-2 rounded-xl border border-purple-500/20 bg-purple-500/5 text-xs text-purple-300 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-            Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-          </div>
-        )}
-
         {/* Question */}
-        <div className="border border-white/10 rounded-xl p-5 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <div className="border border-white/10 rounded-xl p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs border border-white/10 px-2 py-0.5 rounded-full text-white/40">{market.category}</span>
           </div>
           <h1 className="text-lg font-medium leading-snug mb-4">{market.question}</h1>
 
+          {/* Yes/No bars */}
           <div className="flex gap-2 mb-4">
             <div className="flex-1 bg-purple-500/20 border border-purple-500/30 rounded-lg p-3 text-center">
               <div className="text-2xl font-medium text-purple-400">{pct}%</div>
@@ -101,10 +90,12 @@ export default function MarketPage() {
             </div>
           </div>
 
+          {/* Progress bar */}
           <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-4">
             <div className="h-full rounded-full bg-purple-500 transition-all" style={{ width: `${pct}%` }} />
           </div>
 
+          {/* Stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white/5 rounded-lg p-3">
               <div className="text-xs text-white/40 mb-1">Volume</div>
@@ -122,7 +113,7 @@ export default function MarketPage() {
         </div>
 
         {/* Risk scenarios */}
-        <div className="border border-white/10 rounded-xl p-5 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <div className="border border-white/10 rounded-xl p-5 mb-4">
           <h2 className="text-sm font-medium mb-4 text-white/60">Risk scenarios</h2>
           <div className="flex flex-col gap-3">
             {scenarios.map((s, i) => (
@@ -138,7 +129,7 @@ export default function MarketPage() {
         </div>
 
         {/* Signal box */}
-        <div className="border border-purple-500/20 rounded-xl p-5" style={{ backgroundColor: 'rgba(124,58,237,0.05)' }}>
+        <div className="border border-purple-500/20 bg-purple-500/5 rounded-xl p-5">
           <h2 className="text-sm font-medium mb-2 text-purple-300">Foresight signal</h2>
           <p className="text-xs text-white/50 leading-relaxed">
             {pct > 70
