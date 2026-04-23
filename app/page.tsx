@@ -33,6 +33,7 @@ export default function Home() {
   const [loadingSignals, setLoadingSignals] = useState(true);
   const [filter, setFilter] = useState('all');
   const [tab, setTab] = useState<'feed' | 'signals'>('feed');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetch('/api/markets')
@@ -46,7 +47,11 @@ export default function Home() {
       .catch(() => setLoadingSignals(false));
   }, []);
 
-  const filtered = filter === 'all' ? markets : markets.filter(m => m.category === filter);
+  const filtered = markets.filter(m => {
+    const matchesFilter = filter === 'all' || m.category === filter;
+    const matchesSearch = search === '' || m.question.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   const badgeColors: Record<string, string> = {
     green: 'border-green-500/30 text-green-400 bg-green-500/10',
@@ -103,6 +108,17 @@ export default function Home() {
 
         {tab === 'feed' && (
           <>
+            {/* Search */}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Search markets..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20"
+              />
+            </div>
+
             <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
               {['all', 'politics', 'crypto', 'sports', 'general'].map(f => (
                 <button
@@ -121,6 +137,8 @@ export default function Home() {
 
             {loadingMarkets ? (
               <div className="text-white/40 text-sm">Loading markets...</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-white/40 text-sm">No markets found for "{search}"</div>
             ) : (
               <div className="flex flex-col gap-3">
                 {filtered.map(market => (
