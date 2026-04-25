@@ -6,8 +6,8 @@ import { Providers } from './providers';
 const geist = Geist({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Foresight — Prediction Market Intelligence',
-  description: 'AI-powered signals for prediction markets on Solana',
+  title: 'Crada — Prediction Market Intelligence',
+  description: 'The edge serious traders don\'t talk about. Prediction markets, made easy. Built on Solana.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

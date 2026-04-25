@@ -68,9 +68,9 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <img
-              src="/ForeSight banner copy.png"
-              alt="Foresight"
-              style={{ height: '32px', width: 'auto', maxWidth: '160px', objectFit: 'contain' }}
+              src="/crada-logo.png"
+              alt="Crada"
+              style={{ height: '80px', width: 'auto', maxWidth: '400px', objectFit: 'contain' }}
             />
           </div>
           <div className="flex items-center gap-3">
@@ -108,7 +108,6 @@ export default function Home() {
 
         {tab === 'feed' && (
           <>
-            {/* Search */}
             <div className="mb-4">
               <input
                 type="text"

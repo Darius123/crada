@@ -26,7 +26,10 @@ export default function MarketPage() {
   useEffect(() => {
     fetch(`/api/market/${id}`)
       .then(res => res.json())
-      .then(data => { setMarket(data.market); setLoading(false); })
+      .then(data => {
+        if (data.market) setMarket(data.market);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [id]);
 
@@ -57,7 +60,12 @@ export default function MarketPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <img
+              src="/crada-logo.png"
+              alt="Crada"
+              style={{ height: '80px', width: 'auto', maxWidth: '400px', objectFit: 'contain' }}
+            />
             <button onClick={() => router.push('/')} className="text-white/40 hover:text-white text-sm transition-all">
               ← Back
             </button>
@@ -71,6 +79,14 @@ export default function MarketPage() {
           </div>
         </div>
 
+        {/* Connected wallet banner */}
+        {connected && publicKey && (
+          <div className="mb-4 px-4 py-2 rounded-xl border border-purple-500/20 bg-purple-500/5 text-xs text-purple-300 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+            Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+          </div>
+        )}
+
         {/* Question */}
         <div className="border border-white/10 rounded-xl p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
@@ -78,7 +94,6 @@ export default function MarketPage() {
           </div>
           <h1 className="text-lg font-medium leading-snug mb-4">{market.question}</h1>
 
-          {/* Yes/No bars */}
           <div className="flex gap-2 mb-4">
             <div className="flex-1 bg-purple-500/20 border border-purple-500/30 rounded-lg p-3 text-center">
               <div className="text-2xl font-medium text-purple-400">{pct}%</div>
@@ -90,12 +105,10 @@ export default function MarketPage() {
             </div>
           </div>
 
-          {/* Progress bar */}
           <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-4">
             <div className="h-full rounded-full bg-purple-500 transition-all" style={{ width: `${pct}%` }} />
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white/5 rounded-lg p-3">
               <div className="text-xs text-white/40 mb-1">Volume</div>
@@ -130,7 +143,7 @@ export default function MarketPage() {
 
         {/* Signal box */}
         <div className="border border-purple-500/20 bg-purple-500/5 rounded-xl p-5">
-          <h2 className="text-sm font-medium mb-2 text-purple-300">Foresight signal</h2>
+          <h2 className="text-sm font-medium mb-2 text-purple-300">Crada signal</h2>
           <p className="text-xs text-white/50 leading-relaxed">
             {pct > 70
               ? `Strong consensus at ${pct}%. High-conviction market — informed traders appear aligned. Watch for late reversal if new information emerges.`
