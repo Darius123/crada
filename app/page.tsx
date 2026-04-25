@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface Market {
   id: string;
@@ -27,6 +27,7 @@ interface Signal {
 
 export default function Home() {
   const { connected, publicKey } = useWallet();
+  const { login, logout, authenticated, user } = usePrivy();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(true);
@@ -78,7 +79,27 @@ export default function Home() {
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               Live
             </div>
-            <WalletMultiButton style={{ fontSize: '12px', padding: '6px 14px', height: 'auto', backgroundColor: '#7c3aed', borderRadius: '20px' }} />
+            {authenticated ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-purple-300 border border-purple-500/20 px-3 py-1.5 rounded-full bg-purple-500/5">
+                  {user?.email?.address || (user?.wallet?.address?.slice(0, 4) + '...' + user?.wallet?.address?.slice(-4)) || 'Connected'}
+                </span>
+                <button
+                  onClick={logout}
+                  className="text-xs text-white/40 hover:text-white border border-white/10 px-3 py-1.5 rounded-full transition-all"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={login}
+                className="text-xs px-4 py-2 rounded-full font-medium transition-all"
+                style={{ backgroundColor: '#7c3aed', color: 'white' }}
+              >
+                Sign in
+              </button>
+            )}
           </div>
         </div>
 
@@ -86,7 +107,7 @@ export default function Home() {
         {connected && publicKey && (
           <div className="mb-4 px-4 py-2 rounded-xl border border-purple-500/20 bg-purple-500/5 text-xs text-purple-300 flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-            Connected: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+            Wallet: {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
           </div>
         )}
 
