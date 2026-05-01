@@ -26,24 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           accentColor: '#7c3aed',
           logo: '/crada-logo.png',
         },
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
         loginMethods: ['wallet', 'email'],
-        defaultChain: {
-          id: 101,
-          name: 'Solana',
-          network: 'solana',
-          nativeCurrency: { name: 'Solana', symbol: 'SOL', decimals: 9 },
-          rpcUrls: { default: { http: ['https://api.mainnet-beta.solana.com'] } },
-        },
-        supportedChains: [{
-          id: 101,
-          name: 'Solana',
-          network: 'solana',
-          nativeCurrency: { name: 'Solana', symbol: 'SOL', decimals: 9 },
-          rpcUrls: { default: { http: ['https://api.mainnet-beta.solana.com'] } },
-        }],
       }}
     >
       <ConnectionProvider endpoint={endpoint}>

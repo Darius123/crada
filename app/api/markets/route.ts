@@ -66,12 +66,16 @@ export async function GET() {
           volume: parseFloat(m.volumeNum || '0'),
           category,
           endDate: m.endDateIso || '',
+          image: m.image || m.icon || null,
         };
       });
 
-    return NextResponse.json({ markets });
+    // Trending = top 5 by volume
+    const trending = markets.slice(0, 5);
+
+    return NextResponse.json({ markets, trending });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ markets: [], error: 'Failed to fetch' }, { status: 500 });
+    return NextResponse.json({ markets: [], trending: [], error: 'Failed to fetch' }, { status: 500 });
   }
 }
