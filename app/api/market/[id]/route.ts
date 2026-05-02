@@ -31,6 +31,8 @@ export async function GET(
       : q.includes('elect') || q.includes('presid') || q.includes('senate') ? 'politics'
       : 'general';
 
+    const eventSlug = m.events?.[0]?.slug || m.slug || null;
+
     const market = {
       id: m.id,
       question: m.question,
@@ -40,6 +42,7 @@ export async function GET(
       category,
       endDate: m.endDateIso || '',
       description: m.description || '',
+      tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : `https://polymarket.com`,
     };
 
     return NextResponse.json({ market });

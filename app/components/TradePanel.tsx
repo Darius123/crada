@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { VersionedTransaction } from '@solana/web3.js';
 import { Connection } from '@solana/web3.js';
 
@@ -48,7 +48,7 @@ export default function TradePanel({ market }: TradePanelProps) {
   const { publicKey, signTransaction } = useWallet();
   const [side, setSide] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState('');
-  const [quote, setQuote] = useState<any>(null);
+  const [quote, setQuote] = useState<{ outAmount?: number; transaction?: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
@@ -81,8 +81,8 @@ export default function TradePanel({ market }: TradePanelProps) {
       const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setQuote(await res.json());
-    } catch (err: any) {
-      setQuoteError(err.message);
+    } catch (err) {
+      setQuoteError(err instanceof Error ? err.message : String(err));
       setQuote(null);
     } finally {
       setQuoteLoading(false);
@@ -131,8 +131,8 @@ export default function TradePanel({ market }: TradePanelProps) {
       const finalStatus = await pollOrderStatus(sig);
       setOrderStatus(finalStatus);
       setTxStatus('done');
-    } catch (err: any) {
-      setTxError(err.message);
+    } catch (err) {
+      setTxError(err instanceof Error ? err.message : String(err));
       setTxStatus(null);
     }
   };
@@ -236,7 +236,7 @@ export default function TradePanel({ market }: TradePanelProps) {
           {quote && !quoteLoading && (
             <div className="flex justify-between">
               <span className="text-white/40">Estimated contracts</span>
-              <span className="text-white font-mono">{(parseFloat(quote.outAmount || 0) / 1e6).toFixed(2)}</span>
+              <span className="text-white font-mono">{((quote.outAmount ?? 0) / 1e6).toFixed(2)}</span>
             </div>
           )}
         </div>

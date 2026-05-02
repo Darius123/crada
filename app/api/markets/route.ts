@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 
 async function fetchAllMarkets() {
@@ -59,6 +60,8 @@ export async function GET() {
             ? 'politics'
           : 'general';
 
+        const eventSlug = m.events?.[0]?.slug || m.slug || null;
+
         return {
           id: m.id,
           question: m.question,
@@ -67,6 +70,7 @@ export async function GET() {
           category,
           endDate: m.endDateIso || '',
           image: m.image || m.icon || null,
+          tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : `https://polymarket.com`,
         };
       });
 
