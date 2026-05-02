@@ -13,10 +13,12 @@ interface Market {
   question: string;
   probability: number;
   volume: number;
+  volume24h?: number;
   category: string;
   endDate: string;
   image?: string;
   tradeUrl?: string;
+  priceChange?: number | null;
 }
 
 interface TickerItem {
@@ -157,7 +159,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        {/* Bg image */}
+        {/* Eye background image */}
         <div className="absolute inset-0 overflow-hidden">
           <img
             src="https://lh3.googleusercontent.com/aida-public/AB6AXugnWTwJFtJ92AJbjEh0GqVN1wjOr3VF4yn9IppO-VGzEADbPCPyG9GrvW8w5HJ-JAwDOxZvLb3b-29CtIhmkot1UUd7fNxDLYiAYUHu1bmpAoMt3vwOwTlf5Ptx6nytcq7L--s2vQUQr1IV3jfz9JEtlsDToYjYIkientpgEeWBCu-CEHSzafaWnpfTOqW2iupbEUJ7HHwiiaPt6y4HIeZ_BbZDfISCWGv8YewLWaSx4kKe2ldEqBIa2_FvVBOjcdJPQycwN5Hh"
@@ -170,9 +172,13 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
             }}
           />
         </div>
-        {/* Gradient overlays */}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #050505 0%, transparent 25%, transparent 75%, #050505 100%)' }} />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #050505 0%, transparent 20%, transparent 80%, #050505 100%)' }} />
+        {/* Purple orb glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124,58,237,0.15) 0%, transparent 70%)',
+        }} />
+        {/* Edge fades */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #050505 0%, transparent 20%, transparent 78%, #050505 100%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #050505 0%, transparent 15%, transparent 85%, #050505 100%)' }} />
 
         {/* Eye-blink grid overlay */}
         <div className="absolute inset-0 grid grid-cols-5 grid-rows-2 pointer-events-none" style={{ zIndex: 1 }}>
@@ -190,7 +196,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           ))}
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center px-6">
+        <div className="relative z-10 max-w-5xl mx-auto text-center px-6 pb-40">
           {/* Floating badge */}
           <div
             className="animate-float inline-flex items-center gap-3 px-5 py-2 rounded-full mb-10"
@@ -558,8 +564,10 @@ function Dashboard() {
   const { login, logout, authenticated, user } = usePrivy();
   const router = useRouter();
   const [markets, setMarkets] = useState<Market[]>([]);
+  const [trendingMarkets, setTrendingMarkets] = useState<Market[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(true);
   const [kalshiMarkets, setKalshiMarkets] = useState<KalshiMarket[]>([]);
+  const [trendingKalshi, setTrendingKalshi] = useState<KalshiMarket[]>([]);
   const [loadingKalshi, setLoadingKalshi] = useState(true);
   const [activeSource, setActiveSource] = useState<'all' | 'polymarket' | 'kalshi'>('all');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -588,24 +596,34 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
+  const loadMarkets = () => {
     fetch('/api/markets')
       .then(res => res.json())
       .then(data => {
         setMarkets(data.markets || []);
+        setTrendingMarkets(data.trending || []);
         setLoadingMarkets(false);
       })
       .catch(() => setLoadingMarkets(false));
-  }, []);
+  };
 
-  useEffect(() => {
+  const loadKalshi = () => {
     fetch('/api/dflow')
       .then(res => res.json())
       .then(data => {
         setKalshiMarkets(data.markets || []);
+        setTrendingKalshi(data.trending || []);
         setLoadingKalshi(false);
       })
       .catch(() => setLoadingKalshi(false));
+  };
+
+  useEffect(() => {
+    loadMarkets();
+    loadKalshi();
+    // Auto-refresh every 90 seconds
+    const interval = setInterval(() => { loadMarkets(); loadKalshi(); }, 90_000);
+    return () => clearInterval(interval);
   }, []);
 
 
@@ -716,7 +734,11 @@ function Dashboard() {
           {authenticated ? (
             <div className="flex items-center gap-2">
               <span className="text-xs px-3 py-1.5 rounded-full" style={{ color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.20)', background: 'rgba(124,58,237,0.05)' }}>
-                {user?.email?.address || (user?.wallet?.address ? user.wallet.address.slice(0, 4) + '...' + user.wallet.address.slice(-4) : 'Connected')}
+                {(() => {
+                  const sol = user?.linkedAccounts?.find((a: any) => a.type === 'wallet' && a.chainType === 'solana') as any;
+                  const addr = sol?.address ?? user?.email?.address;
+                  return addr ? addr.slice(0, 4) + '...' + addr.slice(-4) : 'Connected';
+                })()}
               </span>
               <button onClick={logout} className="text-xs px-3 py-1.5 rounded-full transition-all hover:text-white" style={{ color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.10)' }}>
                 Sign out
@@ -758,6 +780,7 @@ function Dashboard() {
                 onClick={() => {
                   setActiveSideNav(label);
                   if (label === 'Signals') router.push('/signals');
+                  if (label === 'Portfolio' || label === 'Activity') router.push('/coming-soon');
                 }}
                 className="w-full flex items-center gap-3 px-6 py-3 text-left transition-all"
                 style={{
@@ -780,6 +803,7 @@ function Dashboard() {
         {/* Upgrade */}
         <div className="p-6">
           <button
+            onClick={() => router.push('/coming-soon')}
             className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-[#7C3AED] hover:text-white"
             style={{ border: '1px solid rgba(124,58,237,0.40)', color: '#c4b5fd' }}
           >
@@ -815,6 +839,74 @@ function Dashboard() {
             </span>
           </div>
         </div>
+
+        {/* ── Trending Section ─────────────────────────────────────── */}
+        {(trendingMarkets.length > 0 || trendingKalshi.length > 0) && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: '#7C3AED' }}>🔥 Trending Now</span>
+              <div className="h-px flex-1" style={{ background: 'rgba(124,58,237,0.15)' }} />
+              <span className="text-[9px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>by 24h volume</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              {/* Merge Polymarket + Kalshi trending, sort by 24h volume */}
+              {[
+                ...trendingMarkets.map(m => ({ type: 'poly' as const, id: m.id, question: m.question, pct: Math.round(m.probability * 100), vol24h: m.volume24h ?? 0, image: m.image, priceChange: m.priceChange ?? null, href: '/market/' + m.id })),
+                ...trendingKalshi.map(m => ({ type: 'kalshi' as const, id: m.id, question: m.question, pct: m.yesPct ?? 50, vol24h: m.volume24h, image: m.image, priceChange: null, href: '/kalshi/' + m.id })),
+              ]
+                .sort((a, b) => b.vol24h - a.vol24h)
+                .map(item => {
+                  const volStr = item.vol24h >= 1_000_000 ? `$${(item.vol24h / 1_000_000).toFixed(1)}M` : item.vol24h >= 1_000 ? `$${(item.vol24h / 1_000).toFixed(0)}K` : `$${item.vol24h}`;
+                  return (
+                    <div
+                      key={item.type + item.id}
+                      onClick={() => router.push(item.href)}
+                      className="cursor-pointer flex-shrink-0 rounded-2xl overflow-hidden flex flex-col transition-all"
+                      style={{ width: '220px', background: 'rgba(20,20,28,0.95)', border: '1px solid rgba(124,58,237,0.18)' }}
+                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)')}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.18)')}
+                    >
+                      {item.image && (
+                        <div className="h-20 overflow-hidden relative flex-shrink-0">
+                          <img src={item.image} alt="" className="w-full h-full object-cover opacity-70" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(14,14,20,0.9), transparent 60%)' }} />
+                          <span className="absolute top-2 right-2 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: item.type === 'poly' ? 'rgba(0,144,255,0.25)' : 'rgba(124,58,237,0.30)', color: item.type === 'poly' ? '#60a5fa' : '#c4b5fd', border: `1px solid ${item.type === 'poly' ? 'rgba(96,165,250,0.3)' : 'rgba(196,181,253,0.3)'}` }}>
+                            {item.type === 'poly' ? 'Polymarket' : 'Kalshi'}
+                          </span>
+                        </div>
+                      )}
+                      {!item.image && (
+                        <div className="h-6 flex items-center justify-end px-2 pt-2 flex-shrink-0">
+                          <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: item.type === 'poly' ? 'rgba(0,144,255,0.15)' : 'rgba(124,58,237,0.20)', color: item.type === 'poly' ? '#60a5fa' : '#c4b5fd' }}>
+                            {item.type === 'poly' ? 'Polymarket' : 'Kalshi'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="p-3 flex flex-col gap-2 flex-1">
+                        <p className="text-xs font-semibold leading-snug" style={{ color: 'rgba(255,255,255,0.9)', ...lineClamp2 }}>
+                          {item.question}
+                        </p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="text-sm font-bold font-mono" style={{ color: item.pct >= 50 ? '#4ade80' : '#f87171' }}>{item.pct}{item.type === 'poly' ? '%' : '¢'}</span>
+                          <div className="flex items-center gap-2">
+                            {item.priceChange != null && (
+                              <span className="text-[10px] font-bold" style={{ color: item.priceChange >= 0 ? '#4ade80' : '#f87171' }}>
+                                {item.priceChange >= 0 ? '▲' : '▼'} {Math.abs(Math.round(item.priceChange * 100))}%
+                              </span>
+                            )}
+                            <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{volStr}</span>
+                          </div>
+                        </div>
+                        <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                          <div className="h-full rounded-full" style={{ width: `${item.pct}%`, background: item.pct >= 50 ? '#4ade80' : '#f87171' }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </section>
+        )}
 
         {/* Source tabs */}
         <div className="flex items-center gap-2 mb-5">
@@ -877,11 +969,12 @@ function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                   {filteredPolymarket.slice(0, visiblePolymarket).map(market => {
                     const yesPct = Math.round(market.probability * 100);
-                    const volStr = market.volume >= 1_000_000
-                      ? `$${(market.volume / 1_000_000).toFixed(1)}M`
-                      : market.volume >= 1_000
-                      ? `$${(market.volume / 1_000).toFixed(0)}K`
-                      : `$${market.volume}`;
+                    const v = market.volume24h ?? market.volume;
+                    const volStr = v >= 1_000_000
+                      ? `$${(v / 1_000_000).toFixed(1)}M`
+                      : v >= 1_000
+                      ? `$${(v / 1_000).toFixed(0)}K`
+                      : `$${v}`;
                     return (
                       <div
                         key={market.id}
@@ -917,45 +1010,40 @@ function Dashboard() {
                             {market.question}
                           </p>
 
-                          {/* Probability bar + label */}
-                          <div>
-                            <div className="flex justify-between items-center mb-1.5">
-                              <span className="text-xs font-bold" style={{ color: yesPct >= 50 ? '#4de082' : '#f87171' }}>{yesPct}% chance</span>
-                              <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>YES</span>
-                            </div>
-                            <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                              <div className="h-full rounded-full transition-all" style={{ width: `${yesPct}%`, background: yesPct >= 50 ? '#4de082' : '#f87171' }} />
-                            </div>
-                          </div>
-
-                          {/* Buy buttons */}
+                          {/* YES / NO price panels */}
                           <div className="grid grid-cols-2 gap-1.5">
                             <a
                               href={market.tradeUrl || 'https://polymarket.com'}
                               target="_blank"
                               rel="noreferrer"
                               onClick={e => e.stopPropagation()}
-                              className="py-2 rounded-xl text-center text-[11px] font-bold transition-all hover:brightness-110"
-                              style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80' }}
+                              className="rounded-xl p-2.5 text-center transition-all hover:brightness-110"
+                              style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.20)' }}
                             >
-                              Buy Yes
+                              <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(74,222,128,0.6)' }}>Yes</p>
+                              <p className="text-base font-bold font-mono" style={{ color: '#4ade80' }}>{yesPct}¢</p>
                             </a>
                             <a
                               href={market.tradeUrl || 'https://polymarket.com'}
                               target="_blank"
                               rel="noreferrer"
                               onClick={e => e.stopPropagation()}
-                              className="py-2 rounded-xl text-center text-[11px] font-bold transition-all hover:brightness-110"
-                              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.22)', color: '#f87171' }}
+                              className="rounded-xl p-2.5 text-center transition-all hover:brightness-110"
+                              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}
                             >
-                              Buy No
+                              <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(248,113,113,0.6)' }}>No</p>
+                              <p className="text-base font-bold font-mono" style={{ color: '#f87171' }}>{100 - yesPct}¢</p>
                             </a>
                           </div>
 
                           {/* Footer */}
                           <div className="flex items-center justify-between text-[10px] pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)' }}>
-                            <span>{volStr} Vol.</span>
-                            <span style={{ color: 'rgba(255,255,255,0.25)' }}>Polymarket</span>
+                            <span>{volStr} 24h</span>
+                            {market.priceChange != null && (
+                              <span style={{ color: market.priceChange >= 0 ? '#4ade80' : '#f87171' }}>
+                                {market.priceChange >= 0 ? '▲' : '▼'} {Math.abs(Math.round(market.priceChange * 100))}%
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -32,6 +32,9 @@ interface KalshiMarket {
   error?: string;
 }
 
+interface HistoryPoint { t: number; p: number; }
+
+
 const pageStyles = `
   .glass-card {
     background: rgba(255,255,255,0.05);
@@ -43,6 +46,78 @@ const pageStyles = `
   }
 `;
 
+function ProbabilityChart({ history, currentPct, estimated }: { history: HistoryPoint[]; currentPct: number; estimated?: boolean }) {
+  const W = 600, H = 180;
+  const PAD = { top: 16, right: 16, bottom: 28, left: 42 };
+  const cw = W - PAD.left - PAD.right;
+  const ch = H - PAD.top - PAD.bottom;
+
+  if (history.length < 2) {
+    return (
+      <div className="glass-card w-full rounded-xl flex items-center justify-center" style={{ height: '180px' }}>
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          Loading chart…
+        </p>
+      </div>
+    );
+  }
+
+  const minT = history[0].t;
+  const maxT = history[history.length - 1].t;
+  const tRange = maxT - minT || 1;
+  const toX = (t: number) => PAD.left + ((t - minT) / tRange) * cw;
+  const toY = (p: number) => PAD.top + (1 - p) * ch;
+
+  const pts = history.map(d => `${toX(d.t).toFixed(1)},${toY(d.p).toFixed(1)}`).join(' ');
+  const firstX = toX(history[0].t).toFixed(1);
+  const lastX = toX(history[history.length - 1].t).toFixed(1);
+  const bottomY = (PAD.top + ch).toFixed(1);
+  const areaPath = `M${firstX},${bottomY} L${pts.replace(/(\d+\.?\d*),(\d+\.?\d*)/g, 'L$1,$2').slice(1)} L${lastX},${bottomY} Z`;
+
+  const labelIndices = Array.from({ length: 4 }, (_, i) => Math.round((i / 3) * (history.length - 1)));
+  const xLabels = labelIndices.map(i => ({
+    x: toX(history[i].t),
+    label: new Date(history[i].t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  }));
+  const yTicks = [0, 0.25, 0.5, 0.75, 1];
+  const lineColor = currentPct >= 50 ? '#7c3aed' : '#f87171';
+
+  return (
+    <div className="glass-card rounded-xl overflow-hidden" style={{ padding: '4px 0 0' }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Historical Probability — YES
+        </p>
+        {estimated && (
+          <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            Estimated
+          </span>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full" style={{ height: '180px' }}>
+        <defs>
+          <linearGradient id="kalshiAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {yTicks.map(p => (
+          <g key={p}>
+            <line x1={PAD.left} y1={toY(p)} x2={PAD.left + cw} y2={toY(p)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            <text x={PAD.left - 6} y={toY(p) + 4} textAnchor="end" fontSize="9" fill="rgba(255,255,255,0.3)">{Math.round(p * 100)}%</text>
+          </g>
+        ))}
+        <path d={areaPath} fill="url(#kalshiAreaGrad)" />
+        <polyline points={pts} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={toX(history[history.length - 1].t)} cy={toY(history[history.length - 1].p)} r="3" fill={lineColor} />
+        {xLabels.map(({ x, label }) => (
+          <text key={label} x={x} y={H - 4} textAnchor="middle" fontSize="9" fill="rgba(255,255,255,0.3)">{label}</text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 export default function KalshiMarketPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -51,12 +126,18 @@ export default function KalshiMarketPage() {
   const [loading, setLoading] = useState(true);
   const [tradeTab, setTradeTab] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState('');
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [terminalOpen, setTerminalOpen] = useState(false);
 
   useEffect(() => {
     fetch(`/api/kalshi/${id}`)
       .then(r => r.json())
       .then(d => { setMarket(d); setLoading(false); })
       .catch(() => setLoading(false));
+    fetch(`/api/kalshi/${id}/history`)
+      .then(r => r.json())
+      .then(d => setHistory(d.history ?? []))
+      .catch(() => {});
   }, [id]);
 
   if (loading) return (
@@ -91,6 +172,7 @@ export default function KalshiMarketPage() {
       : `Contested market at ${yesPct}¢. Neither side has conviction. Volume of $${(market.volume / 1_000_000).toFixed(2)}M suggests active interest.`;
 
   const edgePct = yesPct > 50 ? `+${yesPct - 50}` : `-${50 - yesPct}`;
+
   const closeDate = new Date(market.closeTime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
@@ -213,16 +295,8 @@ export default function KalshiMarketPage() {
             ))}
           </div>
 
-          {/* Chart placeholder */}
-          <div className="glass-card w-full rounded-xl relative overflow-hidden flex items-center justify-center" style={{ aspectRatio: '21/9' }}>
-            <div className="absolute inset-0 opacity-20" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, transparent 60%)' }} />
-            <div className="relative z-10 text-center">
-              <svg className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(124,58,237,0.5)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Historical Probability Index</p>
-            </div>
-          </div>
+          {/* Historical Probability Chart */}
+          <ProbabilityChart history={history} currentPct={yesPct} estimated />
 
           {/* Risk Analysis */}
           <div>
@@ -275,11 +349,12 @@ export default function KalshiMarketPage() {
         </div>
 
         {/* RIGHT — col-span-4 */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4 lg:self-start">
+          <div className="sticky top-24 space-y-6">
 
           {/* Trade Panel */}
           <div
-            className="glass-card p-6 rounded-2xl space-y-6 sticky top-24"
+            className="glass-card p-6 rounded-2xl space-y-6"
             style={{ border: '1px solid rgba(255,255,255,0.20)', background: 'rgba(255,255,255,0.05)' }}
           >
             <h3 className="text-sm font-bold uppercase tracking-widest text-white">Trade This Market</h3>
@@ -399,12 +474,23 @@ export default function KalshiMarketPage() {
               </p>
             </div>
 
-            <button className={`${inter.className} text-xs flex items-center gap-1 transition-opacity hover:opacity-70`} style={{ color: '#7C3AED' }}>
+            <button
+              onClick={() => setTerminalOpen(o => !o)}
+              className={`${inter.className} text-xs flex items-center gap-1 transition-opacity hover:opacity-70`}
+              style={{ color: '#7C3AED' }}
+            >
               View Full Terminal Data
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </button>
+
+            {terminalOpen && (
+              <p className={`${inter.className} text-xs mt-3`} style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Coming Soon
+              </p>
+            )}
+          </div>
           </div>
         </div>
       </main>

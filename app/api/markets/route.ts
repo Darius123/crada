@@ -1,85 +1,78 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 
-async function fetchAllMarkets() {
-  const allMarkets: any[] = [];
-  let offset = 0;
-  const limit = 100;
-
-  while (allMarkets.length < 500) {
-    const res = await fetch(
-      `https://gamma-api.polymarket.com/markets?limit=${limit}&offset=${offset}&active=true&order=volumeNum&ascending=false`,
-      { cache: 'no-store' }
-    );
-    const data = await res.json();
-    if (!data || data.length === 0) break;
-    allMarkets.push(...data);
-    if (data.length < limit) break;
-    offset += limit;
-  }
-
-  return allMarkets;
+function detectCategory(q: string, tags: string): string {
+  const t = (q + ' ' + tags).toLowerCase();
+  if (/bitcoin|btc|\beth\b|ethereum|crypto|solana|token|defi|blockchain|coinbase|binance|nft/.test(t)) return 'crypto';
+  if (/nba|nfl|nhl|mlb|soccer|football|basketball|tennis|ufc|boxing|sport|champion|league|match|playoff|tournament|world cup|super bowl/.test(t)) return 'sports';
+  if (/elect|presid|senate|democrat|republican|vote|minister|congress|government|trump|biden|harris|campaign/.test(t)) return 'politics';
+  return 'general';
 }
 
 export async function GET() {
   try {
-    const raw = await fetchAllMarkets();
+    // Fetch 300 active markets ordered by 24h volume — gives us the hottest markets first
+    const pages = await Promise.all(
+      [0, 100, 200].map(offset =>
+        fetch(
+          `https://gamma-api.polymarket.com/markets?limit=100&offset=${offset}&active=true&order=volume24hr&ascending=false`,
+          { next: { revalidate: 60 } }
+        )
+          .then(r => r.json())
+          .then((d: any[]) => (Array.isArray(d) ? d : []))
+          .catch(() => [] as any[])
+      )
+    );
 
-    const seen = new Set();
+    const raw: any[] = pages.flat();
+    const seen = new Set<string>();
+
     const markets = raw
       .filter((m: any) => {
         if (seen.has(m.id) || !m.question) return false;
         seen.add(m.id);
+
+        // Skip extreme-probability markets (already decided)
+        let prob = 0.5;
+        try { prob = parseFloat(JSON.parse(m.outcomePrices || '["0.5"]')[0]); } catch {}
+        if (prob < 0.04 || prob > 0.96) return false;
+
         return true;
       })
       .map((m: any) => {
         let prob = 0.5;
-        try {
-          const prices = JSON.parse(m.outcomePrices || '["0.5","0.5"]');
-          prob = parseFloat(prices[0]);
-        } catch {}
+        try { prob = parseFloat(JSON.parse(m.outcomePrices || '["0.5","0.5"]')[0]); } catch {}
 
-        const q = (m.question || '').toLowerCase();
-        const tags = JSON.stringify(m.tags || '').toLowerCase();
-        const combined = q + ' ' + tags;
-
-        const category =
-          combined.includes('bitcoin') || combined.includes('btc') || combined.includes(' eth') ||
-          combined.includes('crypto') || combined.includes('solana') || combined.includes('token') ||
-          combined.includes('coin') || combined.includes('blockchain') || combined.includes('defi')
-            ? 'crypto'
-          : combined.includes('nba') || combined.includes('nfl') || combined.includes('nhl') ||
-            combined.includes('mlb') || combined.includes('soccer') || combined.includes('football') ||
-            combined.includes('basketball') || combined.includes('tennis') || combined.includes('ufc') ||
-            combined.includes('sport') || combined.includes('champion') || combined.includes('league') ||
-            combined.includes('match') || combined.includes('tournament') || combined.includes('playoff')
-            ? 'sports'
-          : combined.includes('elect') || combined.includes('presid') || combined.includes('senate') ||
-            combined.includes('democrat') || combined.includes('republican') || combined.includes('vote') ||
-            combined.includes('minister') || combined.includes('congress') || combined.includes('government')
-            ? 'politics'
-          : 'general';
-
+        const category = detectCategory(m.question || '', JSON.stringify(m.tags || ''));
         const eventSlug = m.events?.[0]?.slug || m.slug || null;
+        const volume24h = parseFloat(m.volume24hr || '0');
+        const priceChange = m.oneMonthPriceChange != null ? parseFloat(m.oneMonthPriceChange) : null;
 
         return {
           id: m.id,
           question: m.question,
           probability: prob,
           volume: parseFloat(m.volumeNum || '0'),
+          volume24h,
           category,
           endDate: m.endDateIso || '',
           image: m.image || m.icon || null,
-          tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : `https://polymarket.com`,
+          tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : 'https://polymarket.com',
+          priceChange,
+          spread: m.spread != null ? parseFloat(m.spread) : null,
         };
       });
 
-    // Trending = top 5 by volume
-    const trending = markets.slice(0, 5);
+    // Trending = top 10 by 24h volume
+    const trending = [...markets]
+      .sort((a, b) => b.volume24h - a.volume24h)
+      .slice(0, 10);
 
-    return NextResponse.json({ markets, trending });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ markets: [], trending: [], error: 'Failed to fetch' }, { status: 500 });
+    return NextResponse.json(
+      { markets, trending },
+      { headers: { 'Cache-Control': 'public, max-age=60' } }
+    );
+  } catch (err: any) {
+    return NextResponse.json({ markets: [], trending: [], error: err.message }, { status: 500 });
   }
 }

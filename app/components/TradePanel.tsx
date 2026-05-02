@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { VersionedTransaction } from '@solana/web3.js';
+import { useWallets } from '@privy-io/react-auth/solana';
+import { PublicKey } from '@solana/web3.js';
 import { Connection } from '@solana/web3.js';
 
 const DFLOW_PROXY = 'https://api.eitherway.ai/api/dflow';
@@ -45,7 +45,9 @@ interface TradePanelProps {
 }
 
 export default function TradePanel({ market }: TradePanelProps) {
-  const { publicKey, signTransaction } = useWallet();
+  const { wallets } = useWallets();
+  const solWallet = wallets[0] ?? null;
+  const publicKey = solWallet ? new PublicKey(solWallet.address) : null;
   const [side, setSide] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState('');
   const [quote, setQuote] = useState<{ outAmount?: number; transaction?: string } | null>(null);
@@ -95,7 +97,7 @@ export default function TradePanel({ market }: TradePanelProps) {
   }, [fetchQuote]);
 
   const handleTrade = async () => {
-    if (!publicKey || !outputMint) return;
+    if (!publicKey || !outputMint || !solWallet) return;
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) return;
 
@@ -121,9 +123,8 @@ export default function TradePanel({ market }: TradePanelProps) {
       if (!orderData.transaction) throw new Error('No transaction returned');
 
       const txBytes = Uint8Array.from(atob(orderData.transaction), c => c.charCodeAt(0));
-      const tx = VersionedTransaction.deserialize(txBytes);
-      const signed = await signTransaction!(tx);
-      const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: true });
+      const { signedTransaction } = await solWallet!.signTransaction({ transaction: txBytes });
+      const sig = await conn.sendRawTransaction(signedTransaction, { skipPreflight: true });
       setTxSig(sig);
       setTxStatus('polling');
       setOrderStatus('pending');

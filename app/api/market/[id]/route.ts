@@ -33,6 +33,12 @@ export async function GET(
 
     const eventSlug = m.events?.[0]?.slug || m.slug || null;
 
+    let clobTokenId: string | null = null;
+    try {
+      const ids = JSON.parse(m.clobTokenIds || '[]');
+      clobTokenId = ids[0] ?? null;
+    } catch {}
+
     const market = {
       id: m.id,
       question: m.question,
@@ -43,6 +49,7 @@ export async function GET(
       endDate: m.endDateIso || '',
       description: m.description || '',
       tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : `https://polymarket.com`,
+      clobTokenId,
     };
 
     return NextResponse.json({ market });
