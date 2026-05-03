@@ -909,11 +909,7 @@ function Dashboard() {
           {authenticated ? (
             <div className="flex items-center gap-2">
               <span className="text-xs px-3 py-1.5 rounded-full" style={{ color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.20)', background: 'rgba(124,58,237,0.05)' }}>
-                {(() => {
-                  const sol = user?.linkedAccounts?.find((a: any) => a.type === 'wallet' && a.chainType === 'solana') as any;
-                  const addr = sol?.address ?? user?.email?.address;
-                  return addr ? addr.slice(0, 4) + '...' + addr.slice(-4) : 'Connected';
-                })()}
+                {solanaId ?? shortAddr}
               </span>
               <button onClick={logout} className="text-xs px-3 py-1.5 rounded-full transition-all hover:text-white" style={{ color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.10)' }}>
                 Sign out
