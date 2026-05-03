@@ -21,6 +21,7 @@ interface Signal {
   confidence: number;
   minsAgo: number;
   topWallets?: string[];
+  jupiterPowered?: boolean;
 }
 
 const sharedStyles = `
@@ -48,6 +49,7 @@ export default function SignalsPage() {
   const [feedTab, setFeedTab] = useState<'live' | 'history' | 'filters'>('live');
   const [activeSideNav, setActiveSideNav] = useState('Signals');
   const [walletDomains, setWalletDomains] = useState<Record<string, string>>({});
+  const [solPrice, setSolPrice] = useState<number | null>(null);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -64,6 +66,7 @@ export default function SignalsPage() {
           minsAgo: Math.floor(Math.random() * 55) + 1,
         }));
         setSignals(list);
+        if (data.solPrice) setSolPrice(data.solPrice);
         setLoading(false);
 
         // Resolve domains for all wallet addresses in insider signals
@@ -90,6 +93,8 @@ export default function SignalsPage() {
         return { background: 'rgba(245,158,11,0.20)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.20)' };
       case 'red':
         return { background: 'rgba(239,68,68,0.20)', color: '#f87171', border: '1px solid rgba(239,68,68,0.20)' };
+      case 'blue':
+        return { background: 'rgba(99,179,237,0.20)', color: '#63b3ed', border: '1px solid rgba(99,179,237,0.20)' };
       default:
         return { background: 'rgba(255,255,255,0.10)', color: 'white', border: '1px solid rgba(255,255,255,0.10)' };
     }
@@ -265,6 +270,19 @@ export default function SignalsPage() {
           </div>
         </div>
 
+        {/* Jupiter Price Strip */}
+        {solPrice && (
+          <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-xl" style={{ background: 'rgba(99,179,237,0.06)', border: '1px solid rgba(99,179,237,0.15)' }}>
+            <svg className="w-4 h-4 flex-shrink-0" style={{ color: '#63b3ed' }} viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#63b3ed' }}>Jupiter Price Feed</span>
+            <span className="w-px h-3" style={{ background: 'rgba(99,179,237,0.3)' }} />
+            <span className="text-xs font-mono font-bold text-white">SOL <span style={{ color: '#63b3ed' }}>${solPrice.toFixed(2)}</span></span>
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>· Live via Jupiter Swap API</span>
+          </div>
+        )}
+
         {/* Table header — desktop only */}
         <div
           className="hidden md:grid gap-6 px-6 py-2 mb-2"
@@ -299,8 +317,9 @@ export default function SignalsPage() {
                 return (
                   <div
                     key={'m-' + signal.id + idx}
-                    onClick={() => router.push('/market/' + signal.id)}
-                    className="glass-card rounded-xl p-4 cursor-pointer transition-all"
+                    onClick={() => { if (!signal.jupiterPowered) router.push('/market/' + signal.id); }}
+                    className="glass-card rounded-xl p-4 transition-all"
+                    style={{ cursor: signal.jupiterPowered ? 'default' : 'pointer' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                   >
@@ -342,9 +361,9 @@ export default function SignalsPage() {
                 return (
                   <div
                     key={signal.id + idx}
-                    onClick={() => router.push('/market/' + signal.id)}
-                    className="glass-card grid gap-6 items-center px-6 py-4 rounded-xl cursor-pointer transition-all group"
-                    style={{ gridTemplateColumns: '4fr 3fr 2fr 2fr 1fr' }}
+                    onClick={() => { if (!signal.jupiterPowered) router.push('/market/' + signal.id); }}
+                    className="glass-card grid gap-6 items-center px-6 py-4 rounded-xl transition-all group"
+                    style={{ cursor: signal.jupiterPowered ? 'default' : 'pointer', gridTemplateColumns: '4fr 3fr 2fr 2fr 1fr' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                   >

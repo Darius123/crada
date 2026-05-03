@@ -1,6 +1,78 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 
+// Module-level snapshot for cross-request price comparison
+let solPriceSnapshot: { price: number; ts: number } | null = null;
+
+async function fetchJupiterSolPrice(): Promise<number | null> {
+  try {
+    const res = await fetch(
+      'https://api.jup.ag/swap/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&slippageBps=50',
+      { cache: 'no-store' }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return parseInt(data.outAmount) / 1e6;
+  } catch { return null; }
+}
+
+async function detectCryptoCorrelationSignals(markets: any[], solPrice: number): Promise<any[]> {
+  const now = Date.now();
+  let pctChange = 0;
+
+  if (solPriceSnapshot && now - solPriceSnapshot.ts < 10 * 60 * 1000) {
+    pctChange = ((solPrice - solPriceSnapshot.price) / solPriceSnapshot.price) * 100;
+  }
+
+  // Rotate snapshot every 5 minutes so comparison is always vs a historical price
+  if (!solPriceSnapshot || now - solPriceSnapshot.ts > 5 * 60 * 1000) {
+    solPriceSnapshot = { price: solPrice, ts: now };
+  }
+
+  const cryptoMarkets = markets.filter((m: any) => {
+    const q = (m.question || '').toLowerCase();
+    return q.includes('bitcoin') || q.includes('btc') || q.includes('solana') || q.includes(' sol ')
+      || q.includes('ethereum') || q.includes('eth') || q.includes('crypto');
+  });
+
+  const absPct = Math.abs(pctChange);
+  const isVolatile = absPct > 0.5;
+  const bullish = pctChange >= 0;
+
+  if (isVolatile && cryptoMarkets.length > 0) {
+    const dir = bullish ? '↑' : '↓';
+    const totalVol = cryptoMarkets
+      .slice(0, 5)
+      .reduce((s: number, m: any) => s + parseFloat(m.volumeNum || '0'), 0);
+
+    return [{
+      id: 'jup-volatility',
+      question: `SOL ${dir} ${absPct.toFixed(2)}% — ${cryptoMarkets.length} crypto markets may be mispriced`,
+      probability: bullish ? 0.64 : 0.36,
+      volume: totalVol,
+      signalType: 'crypto_volatility',
+      typeLabel: 'Jupiter Signal',
+      typeBadge: bullish ? 'green' : 'red',
+      explanation: `Jupiter Price Feed: SOL is at $${solPrice.toFixed(2)} (${pctChange > 0 ? '+' : ''}${pctChange.toFixed(2)}% recent move). ${cryptoMarkets.length} active crypto prediction markets tracked. Spot price volatility typically precedes market repricing — potential arbitrage window.`,
+      confidence: Math.min(88, 60 + Math.floor(absPct * 8)),
+      jupiterPowered: true,
+    }];
+  }
+
+  return [{
+    id: 'jup-price-context',
+    question: `SOL at $${solPrice.toFixed(2)} — Monitoring ${cryptoMarkets.length} crypto markets`,
+    probability: 0.5,
+    volume: 0,
+    signalType: 'price_context',
+    typeLabel: 'Jupiter Price Feed',
+    typeBadge: 'blue',
+    explanation: `Real-time SOL price via Jupiter: $${solPrice.toFixed(2)}. Monitoring ${cryptoMarkets.length} active crypto prediction markets for volatility correlation. A move of ±0.5% or more triggers a directional signal.`,
+    confidence: 72,
+    jupiterPowered: true,
+  }];
+}
+
 async function detectInsiderActivity(markets: any[]) {
   const insiderSignals = [];
 
@@ -14,7 +86,6 @@ async function detectInsiderActivity(markets: any[]) {
       const trades = await historyRes.json();
       if (!Array.isArray(trades) || trades.length < 3) continue;
 
-      // Group trades by time window (last 30 mins)
       const now = Date.now();
       const windowMs = 30 * 60 * 1000;
       const recentTrades = trades.filter((t: any) => {
@@ -24,7 +95,6 @@ async function detectInsiderActivity(markets: any[]) {
 
       if (recentTrades.length < 3) continue;
 
-      // Check for large coordinated buys
       const uniqueAddresses = new Set(recentTrades.map((t: any) => t.maker || t.address || t.transactionHash));
       const totalValue = recentTrades.reduce((sum: number, t: any) => sum + parseFloat(t.usdcSize || t.size || '0'), 0);
 
@@ -35,7 +105,6 @@ async function detectInsiderActivity(markets: any[]) {
           prob = parseFloat(prices[0]);
         } catch {}
 
-        // Include up to 3 real wallet addresses so the frontend can resolve domains
         const topWallets = [...uniqueAddresses]
           .filter(a => typeof a === 'string' && a.length > 20 && !a.startsWith('0x'))
           .slice(0, 3);
@@ -61,11 +130,12 @@ async function detectInsiderActivity(markets: any[]) {
 
 export async function GET() {
   try {
-    const res = await fetch(
-      'https://gamma-api.polymarket.com/markets?limit=100&active=true&order=volumeNum&ascending=false',
-      { cache: 'no-store' }
-    );
-    const data = await res.json();
+    const [marketsRes, solPrice] = await Promise.all([
+      fetch('https://gamma-api.polymarket.com/markets?limit=100&active=true&order=volumeNum&ascending=false', { cache: 'no-store' }),
+      fetchJupiterSolPrice(),
+    ]);
+
+    const data = await marketsRes.json();
 
     const baseSignals = data
       .filter((m: any) => {
@@ -125,12 +195,16 @@ export async function GET() {
         };
       });
 
-    const insiderSignals = await detectInsiderActivity(data);
-    const allSignals = [...insiderSignals, ...baseSignals];
+    const [insiderSignals, cryptoSignals] = await Promise.all([
+      detectInsiderActivity(data),
+      solPrice ? detectCryptoCorrelationSignals(data, solPrice) : Promise.resolve([]),
+    ]);
 
-    return NextResponse.json({ signals: allSignals });
+    const allSignals = [...insiderSignals, ...cryptoSignals, ...baseSignals];
+
+    return NextResponse.json({ signals: allSignals, solPrice });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ signals: [], error: 'Failed to fetch' }, { status: 500 });
+    return NextResponse.json({ signals: [], solPrice: null, error: 'Failed to fetch' }, { status: 500 });
   }
 }
