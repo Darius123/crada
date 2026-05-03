@@ -225,14 +225,14 @@ export default function SignalsPage() {
       </aside>
 
       {/* Main content */}
-      <main className="pt-24 pb-20 md:pb-8 md:pl-72 pr-6 md:pr-10 min-h-screen">
+      <main className="pt-24 pb-20 md:pb-8 px-4 sm:px-6 md:pl-72 md:pr-10 min-h-screen">
 
         {/* Page header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
             <h1
-              className="font-bold text-white uppercase mb-3"
-              style={{ fontSize: '48px', letterSpacing: '-0.03em', lineHeight: 1 }}
+              className="font-bold text-white uppercase mb-3 text-3xl sm:text-5xl"
+              style={{ letterSpacing: '-0.03em', lineHeight: 1 }}
             >
               Insider Signals
             </h1>
@@ -261,9 +261,9 @@ export default function SignalsPage() {
           </div>
         </div>
 
-        {/* Table header */}
+        {/* Table header — desktop only */}
         <div
-          className="grid gap-6 px-6 py-2 mb-2"
+          className="hidden md:grid gap-6 px-6 py-2 mb-2"
           style={{ gridTemplateColumns: '4fr 3fr 2fr 2fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
         >
           {['MARKET IDENTIFIER', 'SIGNAL TYPE', 'STRENGTH', 'METRIC / VOL', 'TIME'].map((col, i) => (
@@ -287,80 +287,126 @@ export default function SignalsPage() {
             No signals detected.
           </div>
         ) : (
-          <div className="flex flex-col gap-2 mb-10">
-            {signals.map((signal, idx) => {
-              const minsAgo = signal.minsAgo;
-              return (
-                <div
-                  key={signal.id + idx}
-                  onClick={() => router.push('/market/' + signal.id)}
-                  className="glass-card grid gap-6 items-center px-6 py-4 rounded-xl cursor-pointer transition-all group"
-                  style={{ gridTemplateColumns: '4fr 3fr 2fr 2fr 1fr' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-                >
-                  {/* Market identifier */}
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}
-                    >
-                      <svg className="w-5 h-5" style={{ color: 'rgba(255,255,255,0.4)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
+          <>
+            {/* Mobile card view */}
+            <div className="flex flex-col gap-3 mb-10 md:hidden">
+              {signals.map((signal, idx) => {
+                const minsAgo = signal.minsAgo;
+                return (
+                  <div
+                    key={'m-' + signal.id + idx}
+                    onClick={() => router.push('/market/' + signal.id)}
+                    className="glass-card rounded-xl p-4 cursor-pointer transition-all"
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <p
-                        className="text-sm font-bold text-white transition-colors truncate group-hover:text-[#7C3AED]"
-                        style={{ maxWidth: '260px' }}
+                        className="text-sm font-bold text-white leading-snug flex-1"
+                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}
                       >
                         {signal.question}
                       </p>
-                      <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                        {signal.category || signal.signalType}
+                      <span
+                        className="inline-flex px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ml-2"
+                        style={badgeStyle(signal.typeBadge)}
+                      >
+                        {signal.typeLabel}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                          <div className="h-full rounded-full" style={{ width: `${signal.confidence}%`, background: '#7C3AED' }} />
+                        </div>
+                        <span className="text-xs font-mono font-bold text-white">{signal.confidence}%</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-mono font-bold text-white">${(signal.volume / 1000).toFixed(0)}K</span>
+                        <span className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{minsAgo}m ago</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:flex flex-col gap-2 mb-10">
+              {signals.map((signal, idx) => {
+                const minsAgo = signal.minsAgo;
+                return (
+                  <div
+                    key={signal.id + idx}
+                    onClick={() => router.push('/market/' + signal.id)}
+                    className="glass-card grid gap-6 items-center px-6 py-4 rounded-xl cursor-pointer transition-all group"
+                    style={{ gridTemplateColumns: '4fr 3fr 2fr 2fr 1fr' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                  >
+                    {/* Market identifier */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}
+                      >
+                        <svg className="w-5 h-5" style={{ color: 'rgba(255,255,255,0.4)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p
+                          className="text-sm font-bold text-white transition-colors truncate group-hover:text-[#7C3AED]"
+                          style={{ maxWidth: '260px' }}
+                        >
+                          {signal.question}
+                        </p>
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          {signal.category || signal.signalType}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Signal type badge */}
+                    <div>
+                      <span
+                        className="inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
+                        style={badgeStyle(signal.typeBadge)}
+                      >
+                        {signal.typeLabel}
+                      </span>
+                    </div>
+
+                    {/* Strength */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${signal.confidence}%`, background: '#7C3AED' }}
+                        />
+                      </div>
+                      <span className="text-xs font-mono font-bold text-white">{signal.confidence}%</span>
+                    </div>
+
+                    {/* Volume */}
+                    <div className="text-right">
+                      <p className="text-sm font-mono font-bold text-white">
+                        ${(signal.volume / 1000).toFixed(0)}K
+                      </p>
+                      <p className="text-[10px]" style={{ color: Math.round(signal.probability * 100) >= 50 ? '#4de082' : '#f87171' }}>
+                        {Math.round(signal.probability * 100)}%
                       </p>
                     </div>
-                  </div>
 
-                  {/* Signal type badge */}
-                  <div>
-                    <span
-                      className="inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
-                      style={badgeStyle(signal.typeBadge)}
-                    >
-                      {signal.typeLabel}
-                    </span>
-                  </div>
-
-                  {/* Strength */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${signal.confidence}%`, background: '#7C3AED' }}
-                      />
+                    {/* Time */}
+                    <div className="text-right">
+                      <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{minsAgo}m ago</p>
                     </div>
-                    <span className="text-xs font-mono font-bold text-white">{signal.confidence}%</span>
                   </div>
-
-                  {/* Volume */}
-                  <div className="text-right">
-                    <p className="text-sm font-mono font-bold text-white">
-                      ${(signal.volume / 1000).toFixed(0)}K
-                    </p>
-                    <p className="text-[10px]" style={{ color: Math.round(signal.probability * 100) >= 50 ? '#4de082' : '#f87171' }}>
-                      {Math.round(signal.probability * 100)}%
-                    </p>
-                  </div>
-
-                  {/* Time */}
-                  <div className="text-right">
-                    <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>{minsAgo}m ago</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Intelligence Overview bento */}

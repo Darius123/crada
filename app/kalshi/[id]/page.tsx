@@ -257,7 +257,7 @@ export default function KalshiMarketPage() {
           </div>
 
           {/* Title */}
-          <h1 className="font-bold text-white leading-tight" style={{ fontSize: '48px', letterSpacing: '-0.02em' }}>
+          <h1 className="font-bold text-white leading-tight text-2xl sm:text-4xl lg:text-5xl" style={{ letterSpacing: '-0.02em' }}>
             {market.question}
           </h1>
 
@@ -348,8 +348,8 @@ export default function KalshiMarketPage() {
           )}
         </div>
 
-        {/* RIGHT — col-span-4 */}
-        <div className="lg:col-span-4 lg:self-start">
+        {/* RIGHT — col-span-4 (hidden on mobile, use sticky bar instead) */}
+        <div className="hidden lg:block lg:col-span-4 lg:self-start">
           <div className="sticky top-24 space-y-6">
 
           {/* Trade Panel */}
@@ -494,6 +494,35 @@ export default function KalshiMarketPage() {
           </div>
         </div>
       </main>
+
+      {/* Mobile sticky trade bar */}
+      {isActive && (
+        <div
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-4"
+          style={{ background: 'rgba(5,5,5,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.10)' }}
+        >
+          <div className="flex gap-3">
+            <a
+              href={market.tradeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
+              style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.30)', color: '#4ade80' }}
+            >
+              Buy YES · {yesPct}¢
+            </a>
+            <a
+              href={market.tradeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
+              style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.30)', color: '#f87171' }}
+            >
+              Buy NO · {noPct}¢
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -98,6 +98,28 @@ const sharedStyles = `
   .animate-ping-dot {
     animation: ping-dot 1.5s cubic-bezier(0,0,0.2,1) infinite;
   }
+  .hero-h1 {
+    font-size: 80px;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+  }
+  .vision-h2 {
+    font-size: 80px;
+    letter-spacing: -0.03em;
+    line-height: 1.0;
+  }
+  @media (max-width: 640px) {
+    .hero-h1 { font-size: 36px; letter-spacing: -0.02em; line-height: 1.05; }
+    .vision-h2 { font-size: 32px; letter-spacing: -0.02em; line-height: 1.1; }
+  }
+  @media (min-width: 641px) and (max-width: 1023px) {
+    .hero-h1 { font-size: 56px; }
+    .vision-h2 { font-size: 52px; }
+  }
+  .stats-offset { margin-top: 0; }
+  @media (min-width: 640px) {
+    .stats-offset { margin-top: -80px; }
+  }
 `;
 
 // ─── Landing Page ─────────────────────────────────────────────────────────────
@@ -112,7 +134,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
       {/* Fixed Header */}
       <header
-        className="fixed top-0 w-full z-50 flex items-center justify-between px-12 h-20 border-b"
+        className="fixed top-0 w-full z-50 flex items-center justify-between px-5 sm:px-12 h-16 sm:h-20 border-b"
         style={{
           background: 'rgba(5,5,5,0.80)',
           backdropFilter: 'blur(24px)',
@@ -196,7 +218,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           ))}
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center px-6 pb-40">
+        <div className="relative z-10 max-w-5xl mx-auto text-center px-5 sm:px-6 pb-20 sm:pb-40">
           {/* Floating badge */}
           <div
             className="animate-float inline-flex items-center gap-3 px-5 py-2 rounded-full mb-10"
@@ -212,10 +234,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           </div>
 
           {/* H1 */}
-          <h1
-            className="font-bold mb-8"
-            style={{ fontSize: '80px', letterSpacing: '-0.04em', lineHeight: '0.95' }}
-          >
+          <h1 className="hero-h1 font-bold mb-8">
             <span style={{ color: 'rgba(255,255,255,0.4)' }}>THE MARKET MOVED.</span>
             <br />
             <span style={{ color: 'rgba(255,255,255,0.6)' }}>YOU DIDN&apos;T SEE IT COMING.</span>
@@ -225,9 +244,8 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
           {/* Subtitle */}
           <p
-            className={`${inter.className} mx-auto mb-10 rounded-xl px-6 py-2`}
+            className={`${inter.className} mx-auto mb-10 rounded-xl px-4 sm:px-6 py-2 text-sm sm:text-xl`}
             style={{
-              fontSize: '20px',
               color: 'rgba(255,255,255,0.70)',
               maxWidth: '48rem',
               background: 'rgba(0,0,0,0.20)',
@@ -238,11 +256,11 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
             <button
               onClick={onEnter}
-              className="purple-glow flex items-center gap-2 font-bold text-white rounded-2xl"
-              style={{ background: '#7C3AED', paddingLeft: '48px', paddingRight: '48px', paddingTop: '24px', paddingBottom: '24px', fontSize: '16px' }}
+              className="purple-glow w-full sm:w-auto flex items-center justify-center gap-2 font-bold text-white rounded-2xl px-10 sm:px-12 py-5 sm:py-6 text-base"
+              style={{ background: '#7C3AED' }}
             >
               Enter the Terminal
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -251,15 +269,10 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
             </button>
             <button
               onClick={onEnter}
-              className="font-bold text-white rounded-2xl"
+              className="w-full sm:w-auto font-bold text-white rounded-2xl px-10 sm:px-12 py-5 sm:py-6 text-base"
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.10)',
-                paddingLeft: '48px',
-                paddingRight: '48px',
-                paddingTop: '24px',
-                paddingBottom: '24px',
-                fontSize: '16px',
               }}
             >
               View Live Signals
@@ -269,8 +282,8 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
       </section>
 
       {/* Stats Banner */}
-      <section className="relative z-10 px-8" style={{ marginTop: '-80px' }}>
-        <div className="terminal-glass rounded-3xl p-12 grid grid-cols-2 lg:grid-cols-4 gap-12 max-w-[1280px] mx-auto">
+      <section className="stats-offset relative z-10 px-5 sm:px-8">
+        <div className="terminal-glass rounded-3xl p-6 sm:p-12 grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-12 max-w-[1280px] mx-auto">
           {[
             { label: 'Market Coverage', value: '840+', sub: 'Active' },
             { label: 'Signal Latency', value: '<120ms', sub: 'Avg' },
@@ -294,7 +307,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
       </section>
 
       {/* Features Section */}
-      <section className="py-32 px-8 max-w-[1280px] mx-auto">
+      <section className="py-16 sm:py-32 px-5 sm:px-8 max-w-[1280px] mx-auto">
         <div className="mb-16 text-center">
           <p className="text-xs font-bold uppercase tracking-[0.25em] mb-4" style={{ color: '#7C3AED' }}>PLATFORM CAPABILITIES</p>
           <h2 className="text-4xl font-bold text-white mb-6">Institutional Grade Tools</h2>
@@ -306,7 +319,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
         <div className="grid md:grid-cols-12 gap-8">
           {/* Whale Signal — col-span-7 */}
-          <div className="md:col-span-7 terminal-glass rounded-3xl p-12">
+          <div className="md:col-span-7 terminal-glass rounded-3xl p-6 sm:p-12">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
               style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.20)' }}
@@ -336,7 +349,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           </div>
 
           {/* Unified Aggregation — col-span-5 */}
-          <div className="md:col-span-5 terminal-glass rounded-3xl p-12 flex flex-col justify-between">
+          <div className="md:col-span-5 terminal-glass rounded-3xl p-6 sm:p-12 flex flex-col justify-between">
             <div>
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
@@ -361,7 +374,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
           {/* Zero-Latency — col-span-5 */}
           <div
-            className="md:col-span-5 rounded-3xl p-12 relative overflow-hidden"
+            className="md:col-span-5 rounded-3xl p-6 sm:p-12 relative overflow-hidden"
             style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.10)' }}
           >
             <div
@@ -391,7 +404,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           </div>
 
           {/* Quote — col-span-7 */}
-          <div className="md:col-span-7 terminal-glass rounded-3xl p-12 flex items-center relative overflow-hidden">
+          <div className="md:col-span-7 terminal-glass rounded-3xl p-6 sm:p-12 flex items-center relative overflow-hidden">
             <div className="relative z-10 max-w-lg">
               <p className="text-6xl font-bold mb-4" style={{ color: 'rgba(124,58,237,0.40)', fontFamily: 'serif', lineHeight: 1 }}>&ldquo;</p>
               <p className="text-2xl font-bold text-white mb-3 italic leading-snug">
@@ -412,13 +425,10 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
       </section>
 
       {/* Vision */}
-      <section className="py-32 px-8">
+      <section className="py-16 sm:py-32 px-5 sm:px-8">
         <div className="max-w-[1280px] mx-auto">
           <p className="text-xs font-bold uppercase mb-6" style={{ color: '#7C3AED', letterSpacing: '0.25em' }}>OUR THESIS</p>
-          <h2
-            className="font-bold text-white mb-10"
-            style={{ fontSize: '80px', letterSpacing: '-0.03em', lineHeight: 1.0 }}
-          >
+          <h2 className="vision-h2 font-bold text-white mb-10">
             MOST TRADERS{' '}
             <span style={{ color: 'rgba(255,255,255,0.20)' }}>OPERATE IN THE DARK.</span>
             <br />
@@ -430,7 +440,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
       </section>
 
       {/* Footer */}
-      <footer className="py-24 px-8" style={{ background: 'rgba(5,5,5,1)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <footer className="py-12 sm:py-24 px-5 sm:px-8 pb-28 sm:pb-12" style={{ background: 'rgba(5,5,5,1)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="max-w-[1280px] mx-auto grid grid-cols-12 gap-8">
           {/* Brand */}
           <div className="col-span-12 md:col-span-5">
@@ -813,7 +823,7 @@ function Dashboard() {
       </aside>
 
       {/* Main content */}
-      <main className="pt-24 pb-20 md:pb-8 md:pl-72 pr-6 md:pr-10 min-h-screen">
+      <main className="pt-24 pb-20 md:pb-8 px-4 sm:px-6 md:pl-72 md:pr-10 min-h-screen">
 
         {/* Ticker strip */}
         <div className="glass-card rounded-xl overflow-hidden mb-10" style={{ position: 'relative' }}>
@@ -909,7 +919,7 @@ function Dashboard() {
         )}
 
         {/* Source tabs */}
-        <div className="flex items-center gap-2 mb-5">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
           {sources.map(({ key, label }) => (
             <button
               key={key}
