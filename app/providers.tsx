@@ -32,7 +32,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         },
         plugins: [defaultSolanaRpcsPlugin()],
-        connectorsDebugLogs: true,
       }}
     >
       <ConnectionProvider endpoint={endpoint}>

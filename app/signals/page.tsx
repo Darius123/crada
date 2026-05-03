@@ -160,7 +160,11 @@ export default function SignalsPage() {
           {authenticated ? (
             <div className="flex items-center gap-2">
               <span className="text-xs px-3 py-1.5 rounded-full" style={{ color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.20)', background: 'rgba(124,58,237,0.05)' }}>
-                {user?.email?.address || (user?.wallet?.address ? user.wallet.address.slice(0, 4) + '...' + user.wallet.address.slice(-4) : 'Connected')}
+                {(() => {
+                  const sol = user?.linkedAccounts?.find((a: any) => a.type === 'wallet' && a.chainType === 'solana') as any;
+                  const addr = sol?.address ?? user?.email?.address;
+                  return addr ? addr.slice(0, 4) + '...' + addr.slice(-4) : 'Connected';
+                })()}
               </span>
               <button onClick={logout} className="text-xs px-3 py-1.5 rounded-full transition-all hover:text-white" style={{ color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.10)' }}>
                 Sign out
@@ -482,10 +486,11 @@ export default function SignalsPage() {
         style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(20px)', borderRadius: '16px' }}
       >
         {[
-          { label: 'Markets', active: false, onClick: () => router.push('/') },
-          { label: 'Signals', active: true, onClick: () => {} },
-          { label: 'Wallet', active: false, onClick: login },
-        ].map(({ label, active, onClick }) => (
+          { label: 'Markets',   active: false, onClick: () => router.push('/'),             icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+          { label: 'Signals',   active: true,  onClick: () => {},                           icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+          { label: 'Portfolio', active: false, onClick: () => router.push('/coming-soon'),  icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
+          { label: 'Activity',  active: false, onClick: () => router.push('/coming-soon'),  icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+        ].map(({ label, active, onClick, icon }) => (
           <button
             key={label}
             onClick={onClick}
@@ -493,13 +498,7 @@ export default function SignalsPage() {
             style={{ color: active ? '#7C3AED' : 'rgba(255,255,255,0.4)' }}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
-                label === 'Markets'
-                  ? 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-                  : label === 'Signals'
-                  ? 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z'
-                  : 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'
-              } />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
             </svg>
             <span className="text-[10px] font-bold uppercase">{label}</span>
           </button>
