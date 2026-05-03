@@ -153,6 +153,20 @@ export default function MarketPage() {
   const [amount, setAmount] = useState('');
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'news'>('overview');
+  const [news, setNews] = useState<{ title: string; link: string; source: string; minsAgo: number; sentiment: 'yes' | 'no' | 'neutral' }[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsFetched, setNewsFetched] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'news' || newsFetched) return;
+    setNewsLoading(true);
+    fetch('/api/market/' + id + '/news')
+      .then(r => r.json())
+      .then(d => { setNews(d.news || []); setNewsFetched(true); })
+      .catch(() => setNewsFetched(true))
+      .finally(() => setNewsLoading(false));
+  }, [activeTab, id, newsFetched]);
 
   useEffect(() => {
     fetch('/api/market/' + id)
@@ -325,46 +339,126 @@ export default function MarketPage() {
             ))}
           </div>
 
-          {/* Historical Probability Chart */}
-          <ProbabilityChart history={history} currentPct={pct} />
-
-          {/* Risk Analysis */}
-          <div>
-            <h3 className="text-lg font-bold text-white mb-4">Risk Analysis</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                {
-                  label: 'Macro Lag',
-                  dot: '#4de082',
-                  text: pct > 60
-                    ? `Likely resolves Yes. Strong consensus forming at ${pct}%.`
-                    : `Possible Yes outcome. Market pricing ${pct}% probability.`,
-                },
-                {
-                  label: 'Network Load',
-                  dot: '#fbbf24',
-                  text: 'Sideways movement possible. Odds may consolidate before any major shift. Monitor volume for confirmation.',
-                },
-                {
-                  label: 'Regulatory',
-                  dot: '#f87171',
-                  text: noPct > 60
-                    ? `Likely resolves No. Bears in control at ${noPct}%.`
-                    : `${noPct}% chance of No outcome. Still contested.`,
-                },
-              ].map(({ label, dot, text }) => (
-                <div key={label} className="glass-card p-4 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-                    <p className="text-xs font-bold uppercase tracking-widest text-white">{label}</p>
-                  </div>
-                  <p className={`${inter.className} text-xs leading-relaxed`} style={{ color: 'rgba(255,255,255,0.5)' }}>
-                    {text}
-                  </p>
-                </div>
-              ))}
-            </div>
+          {/* Tab switcher */}
+          <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {(['overview', 'news'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
+                style={activeTab === tab
+                  ? { background: '#7C3AED', color: 'white' }
+                  : { color: 'rgba(255,255,255,0.4)' }}
+              >
+                {tab === 'overview' ? 'Overview' : 'News & Social'}
+              </button>
+            ))}
           </div>
+
+          {activeTab === 'overview' ? (
+            <>
+              {/* Historical Probability Chart */}
+              <ProbabilityChart history={history} currentPct={pct} />
+
+              {/* Risk Analysis */}
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4">Risk Analysis</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      label: 'Macro Lag',
+                      dot: '#4de082',
+                      text: pct > 60
+                        ? `Likely resolves Yes. Strong consensus forming at ${pct}%.`
+                        : `Possible Yes outcome. Market pricing ${pct}% probability.`,
+                    },
+                    {
+                      label: 'Network Load',
+                      dot: '#fbbf24',
+                      text: 'Sideways movement possible. Odds may consolidate before any major shift. Monitor volume for confirmation.',
+                    },
+                    {
+                      label: 'Regulatory',
+                      dot: '#f87171',
+                      text: noPct > 60
+                        ? `Likely resolves No. Bears in control at ${noPct}%.`
+                        : `${noPct}% chance of No outcome. Still contested.`,
+                    },
+                  ].map(({ label, dot, text }) => (
+                    <div key={label} className="glass-card p-4 rounded-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
+                        <p className="text-xs font-bold uppercase tracking-widest text-white">{label}</p>
+                      </div>
+                      <p className={`${inter.className} text-xs leading-relaxed`} style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* News & Social feed */
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  Signal direction vs. market question
+                </p>
+                <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              </div>
+
+              {newsLoading ? (
+                <div className="py-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Scanning news feeds...
+                </div>
+              ) : news.length === 0 ? (
+                <div className="py-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  No recent news found for this market.
+                </div>
+              ) : news.map((item, i) => {
+                const age = item.minsAgo < 60
+                  ? `${item.minsAgo}m ago`
+                  : item.minsAgo < 1440
+                  ? `${Math.round(item.minsAgo / 60)}h ago`
+                  : `${Math.round(item.minsAgo / 1440)}d ago`;
+                return (
+                  <a
+                    key={i}
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="glass-card block rounded-xl p-4 transition-all hover:border-purple-500/30"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white leading-snug mb-2">
+                          {item.title}
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          <span className="font-bold">{item.source}</span>
+                          <span>·</span>
+                          <span>{age}</span>
+                        </div>
+                      </div>
+                      <span
+                        className="flex-shrink-0 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest"
+                        style={
+                          item.sentiment === 'yes'
+                            ? { background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }
+                            : item.sentiment === 'no'
+                            ? { background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+                            : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }
+                        }
+                      >
+                        {item.sentiment === 'yes' ? '↑ YES' : item.sentiment === 'no' ? '↓ NO' : '— Neutral'}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* RIGHT — col-span-4 (hidden on mobile, use sticky bar instead) */}

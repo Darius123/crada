@@ -110,15 +110,6 @@ export default function SignalsPage() {
         </svg>
       ),
     },
-    {
-      label: 'Activity',
-      path: '/',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
   ];
 
   if (!ready) {
@@ -147,10 +138,6 @@ export default function SignalsPage() {
       >
         <div className="flex items-center gap-6">
           <img src="/crada-logo.png" alt="Crada" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
-          <nav className="hidden md:flex items-center gap-6">
-            <button onClick={() => router.push('/')} className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Markets</button>
-            <button className="text-sm font-medium" style={{ color: '#7C3AED' }}>Signals</button>
-          </nav>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full" style={{ color: '#4de082', border: '1px solid rgba(77,224,130,0.30)' }}>
@@ -200,7 +187,7 @@ export default function SignalsPage() {
             return (
               <button
                 key={label}
-                onClick={() => { setActiveSideNav(label); router.push(path); }}
+                onClick={() => { setActiveSideNav(label); if (label === 'Portfolio') sessionStorage.setItem('crada_tab', 'Portfolio'); router.push(path); }}
                 className="w-full flex items-center gap-3 px-6 py-3 text-left transition-all"
                 style={{
                   color: isActive ? '#7C3AED' : 'rgba(255,255,255,0.4)',
@@ -488,8 +475,7 @@ export default function SignalsPage() {
         {[
           { label: 'Markets',   active: false, onClick: () => router.push('/'),             icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
           { label: 'Signals',   active: true,  onClick: () => {},                           icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
-          { label: 'Portfolio', active: false, onClick: () => router.push('/coming-soon'),  icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
-          { label: 'Activity',  active: false, onClick: () => router.push('/coming-soon'),  icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+          { label: 'Portfolio', active: false, onClick: () => { sessionStorage.setItem('crada_tab', 'Portfolio'); router.push('/'); }, icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
         ].map(({ label, active, onClick, icon }) => (
           <button
             key={label}

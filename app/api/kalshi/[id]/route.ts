@@ -48,6 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       earlyCloseCondition: m.earlyCloseCondition || '',
       eventTicker: m.eventTicker,
       image,
+      accounts: m.accounts ?? {},
       tradeUrl: `https://dflow.net/prediction/${m.eventTicker}`,
     });
   } catch (err: any) {

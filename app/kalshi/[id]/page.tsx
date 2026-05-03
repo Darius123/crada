@@ -1,12 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
+import { PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 import { Space_Grotesk, Inter } from 'next/font/google';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'] });
 const inter = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
+
+const DFLOW_PROXY = 'https://api.eitherway.ai/api/dflow';
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+const STATUS_MSGS: Record<string, string> = {
+  pending: 'Order submitted — waiting for confirmation...',
+  open: 'Order live on-chain, awaiting fill...',
+  pendingClose: 'Filled! Awaiting settlement...',
+  closed: 'Order filled and settled!',
+  expired: 'Order expired. Try again.',
+  failed: 'Order failed. Please retry.',
+  timeout: 'Status check timed out. Check your wallet.',
+};
+
+async function pollOrderStatus(signature: string, maxTries = 60): Promise<string> {
+  for (let i = 0; i < maxTries; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order-status?signature=${signature}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (['closed', 'expired', 'failed', 'pendingClose'].includes(data.status)) return data.status;
+    } catch { continue; }
+  }
+  return 'timeout';
+}
 
 interface KalshiMarket {
   id: string;
@@ -29,6 +58,7 @@ interface KalshiMarket {
   eventTicker: string;
   image: string | null;
   tradeUrl: string;
+  accounts?: Record<string, { yesMint?: string; noMint?: string }>;
   error?: string;
 }
 
@@ -122,12 +152,41 @@ export default function KalshiMarketPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { login, logout, authenticated } = usePrivy();
+  const { wallets } = useWallets();
+  const solWallet = wallets[0] ?? null;
+  const publicKey = solWallet ? new PublicKey(solWallet.address) : null;
+  const { signAndSendTransaction } = useSignAndSendTransaction();
+
   const [market, setMarket] = useState<KalshiMarket | null>(null);
   const [loading, setLoading] = useState(true);
   const [tradeTab, setTradeTab] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState('');
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'news'>('overview');
+  const [news, setNews] = useState<{ title: string; link: string; source: string; minsAgo: number; sentiment: 'yes' | 'no' | 'neutral' }[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsFetched, setNewsFetched] = useState(false);
+
+  // On-chain trade state
+  const [quote, setQuote] = useState<{ outAmount?: number } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [orderStatus, setOrderStatus] = useState<string | null>(null);
+  const [txSig, setTxSig] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'news' || newsFetched) return;
+    setNewsLoading(true);
+    fetch(`/api/kalshi/${id}/news`)
+      .then(r => r.json())
+      .then(d => { setNews(d.news || []); setNewsFetched(true); })
+      .catch(() => setNewsFetched(true))
+      .finally(() => setNewsLoading(false));
+  }, [activeTab, id, newsFetched]);
 
   useEffect(() => {
     fetch(`/api/kalshi/${id}`)
@@ -139,6 +198,69 @@ export default function KalshiMarketPage() {
       .then(d => setHistory(d.history ?? []))
       .catch(() => {});
   }, [id]);
+
+  const usdcAcct = market?.accounts?.[USDC_MINT];
+  const yesMint = usdcAcct?.yesMint;
+  const noMint = usdcAcct?.noMint;
+  const outputMint = tradeTab === 'yes' ? yesMint : noMint;
+  const canTradeOnChain = !!(outputMint && market?.status && ['active', 'open'].includes(market.status));
+
+  const fetchQuote = useCallback(async () => {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0 || !outputMint) { setQuote(null); return; }
+    setQuoteLoading(true);
+    setQuoteError(null);
+    try {
+      const amtScaled = Math.round(amt * 1_000_000).toString();
+      const params = new URLSearchParams({ inputMint: USDC_MINT, outputMint, amount: amtScaled, slippageBps: 'auto', prioritizationFeeLamports: 'auto', predictionMarketSlippageBps: '100' });
+      const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order?${params}`);
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        let msg = `HTTP ${res.status}`;
+        try {
+          const body = JSON.parse(text);
+          msg = body?.error || body?.message || body?.detail || msg;
+        } catch { if (text) msg = text; }
+        if (res.status === 400) msg = 'Amount unavailable — try a smaller size or switch sides';
+        throw new Error(msg);
+      }
+      setQuote(await res.json());
+    } catch (err) {
+      setQuoteError(err instanceof Error ? err.message : String(err));
+      setQuote(null);
+    } finally { setQuoteLoading(false); }
+  }, [amount, outputMint]);
+
+  useEffect(() => {
+    const t = setTimeout(fetchQuote, 500);
+    return () => clearTimeout(t);
+  }, [fetchQuote]);
+
+  const handleTrade = async () => {
+    if (!publicKey || !outputMint || !solWallet) return;
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) return;
+    setTxStatus('submitting'); setTxError(null); setOrderStatus(null); setTxSig(null);
+    try {
+      const amtScaled = Math.round(amt * 1_000_000).toString();
+      const params = new URLSearchParams({ inputMint: USDC_MINT, outputMint, amount: amtScaled, userPublicKey: publicKey.toBase58(), slippageBps: 'auto', prioritizationFeeLamports: 'auto', predictionMarketSlippageBps: '100' });
+      const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const orderData = await res.json();
+      if (!orderData.transaction) throw new Error('No transaction returned');
+      const txBytes = Uint8Array.from(atob(orderData.transaction), c => c.charCodeAt(0));
+      const { signature } = await signAndSendTransaction({ transaction: txBytes, wallet: solWallet });
+      const sig = bs58.encode(signature);
+      setTxSig(sig); setTxStatus('polling'); setOrderStatus('pending');
+      const finalStatus = await pollOrderStatus(sig);
+      setOrderStatus(finalStatus); setTxStatus('done');
+    } catch (err) {
+      setTxError(err instanceof Error ? err.message : String(err));
+      setTxStatus(null);
+    }
+  };
+
+  const resetTrade = () => { setTxStatus(null); setOrderStatus(null); setTxSig(null); setTxError(null); setAmount(''); setQuote(null); };
 
   if (loading) return (
     <div className={`${spaceGrotesk.className} min-h-screen flex items-center justify-center`} style={{ background: '#050505' }}>
@@ -295,44 +417,124 @@ export default function KalshiMarketPage() {
             ))}
           </div>
 
-          {/* Historical Probability Chart */}
-          <ProbabilityChart history={history} currentPct={yesPct} estimated />
-
-          {/* Risk Analysis */}
-          <div>
-            <h3 className="text-lg font-bold text-white mb-4">Risk Analysis</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                {
-                  label: 'Macro Lag',
-                  dot: '#4de082',
-                  text: yesPct > 60
-                    ? `Likely resolves Yes. Strong consensus forming at ${yesPct}¢.`
-                    : `Possible Yes outcome. Market pricing ${yesPct}¢ probability.`,
-                },
-                {
-                  label: 'Network Load',
-                  dot: '#fbbf24',
-                  text: 'Sideways movement possible. Odds may consolidate before any major shift. Monitor volume for confirmation.',
-                },
-                {
-                  label: 'Regulatory',
-                  dot: '#f87171',
-                  text: noPct > 60
-                    ? `Likely resolves No. Bears in control at ${noPct}¢.`
-                    : `${noPct}¢ chance of No outcome. Still contested.`,
-                },
-              ].map(({ label, dot, text }) => (
-                <div key={label} className="glass-card p-4 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-                    <p className="text-xs font-bold uppercase tracking-widest text-white">{label}</p>
-                  </div>
-                  <p className={`${inter.className} text-xs leading-relaxed`} style={{ color: 'rgba(255,255,255,0.5)' }}>{text}</p>
-                </div>
-              ))}
-            </div>
+          {/* Tab switcher */}
+          <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {(['overview', 'news'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
+                style={activeTab === tab
+                  ? { background: '#7C3AED', color: 'white' }
+                  : { color: 'rgba(255,255,255,0.4)' }}
+              >
+                {tab === 'overview' ? 'Overview' : 'News & Social'}
+              </button>
+            ))}
           </div>
+
+          {activeTab === 'overview' ? (
+            <>
+              {/* Historical Probability Chart */}
+              <ProbabilityChart history={history} currentPct={yesPct} estimated />
+
+              {/* Risk Analysis */}
+              <div>
+                <h3 className="text-lg font-bold text-white mb-4">Risk Analysis</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      label: 'Macro Lag',
+                      dot: '#4de082',
+                      text: yesPct > 60
+                        ? `Likely resolves Yes. Strong consensus forming at ${yesPct}¢.`
+                        : `Possible Yes outcome. Market pricing ${yesPct}¢ probability.`,
+                    },
+                    {
+                      label: 'Network Load',
+                      dot: '#fbbf24',
+                      text: 'Sideways movement possible. Odds may consolidate before any major shift. Monitor volume for confirmation.',
+                    },
+                    {
+                      label: 'Regulatory',
+                      dot: '#f87171',
+                      text: noPct > 60
+                        ? `Likely resolves No. Bears in control at ${noPct}¢.`
+                        : `${noPct}¢ chance of No outcome. Still contested.`,
+                    },
+                  ].map(({ label, dot, text }) => (
+                    <div key={label} className="glass-card p-4 rounded-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
+                        <p className="text-xs font-bold uppercase tracking-widest text-white">{label}</p>
+                      </div>
+                      <p className={`${inter.className} text-xs leading-relaxed`} style={{ color: 'rgba(255,255,255,0.5)' }}>{text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* News & Social feed */
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  Signal direction vs. market question
+                </p>
+                <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              </div>
+
+              {newsLoading ? (
+                <div className="py-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Scanning news feeds...
+                </div>
+              ) : news.length === 0 ? (
+                <div className="py-10 text-center text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  No recent news found for this market.
+                </div>
+              ) : news.map((item, i) => {
+                const age = item.minsAgo < 60
+                  ? `${item.minsAgo}m ago`
+                  : item.minsAgo < 1440
+                  ? `${Math.round(item.minsAgo / 60)}h ago`
+                  : `${Math.round(item.minsAgo / 1440)}d ago`;
+                return (
+                  <a
+                    key={i}
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="glass-card block rounded-xl p-4 transition-all hover:border-purple-500/30"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white leading-snug mb-2">
+                          {item.title}
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          <span className="font-bold">{item.source}</span>
+                          <span>·</span>
+                          <span>{age}</span>
+                        </div>
+                      </div>
+                      <span
+                        className="flex-shrink-0 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest"
+                        style={
+                          item.sentiment === 'yes'
+                            ? { background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }
+                            : item.sentiment === 'no'
+                            ? { background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+                            : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }
+                        }
+                      >
+                        {item.sentiment === 'yes' ? '↑ YES' : item.sentiment === 'no' ? '↓ NO' : '— Neutral'}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
 
           {/* Resolution rules */}
           {market.rulesPrimary && (
@@ -410,41 +612,99 @@ export default function KalshiMarketPage() {
               ))}
             </div>
 
-            {/* Payout + implied probability */}
+            {/* Quote / payout */}
             <div className="space-y-2 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Est. Payout</span>
-                <span className="text-sm font-mono font-bold text-white">
-                  ${tradeTab === 'yes' ? payoutYes : payoutNo}
-                </span>
-              </div>
+              {canTradeOnChain ? (
+                <>
+                  {quoteLoading && <div className="text-[10px] text-white/30">Fetching quote...</div>}
+                  {quoteError && <div className="text-[10px] text-red-400">{quoteError}</div>}
+                  {quote && !quoteLoading && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Est. Contracts</span>
+                      <span className="text-sm font-mono font-bold text-white">{((quote.outAmount ?? 0) / 1e6).toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Est. Payout</span>
+                  <span className="text-sm font-mono font-bold text-white">${tradeTab === 'yes' ? payoutYes : payoutNo}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Implied Prob.</span>
-                <span className="text-sm font-mono font-bold" style={{ color: '#7C3AED' }}>
-                  {tradeTab === 'yes' ? yesPct : noPct}¢
-                </span>
+                <span className="text-sm font-mono font-bold" style={{ color: '#7C3AED' }}>{tradeTab === 'yes' ? yesPct : noPct}¢</span>
               </div>
             </div>
 
-            {/* CTA */}
-            {isActive ? (
-              <a
-                href={market.tradeUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full py-4 rounded-xl text-center text-sm font-bold text-white transition-all hover:brightness-110"
-                style={{ background: '#7C3AED', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}
-              >
-                Trade on DFlow
-              </a>
-            ) : (
-              <div className="w-full py-4 rounded-xl text-center text-sm font-bold uppercase tracking-widest" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
-                Market Closed
+            {/* TX error */}
+            {txError && (
+              <div className="rounded-xl p-3 text-xs text-red-400" style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}>
+                {txError}
               </div>
             )}
 
+            {/* TX success */}
+            {txStatus === 'done' && (
+              <div className="space-y-3">
+                <div className="text-xs text-white/60">{STATUS_MSGS[orderStatus || ''] || ''}</div>
+                {txSig && (
+                  <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noreferrer" className="text-xs text-purple-400 hover:underline block">
+                    View on Solscan →
+                  </a>
+                )}
+                <button onClick={resetTrade} className="w-full py-2 rounded-xl text-sm font-medium border border-white/10 text-white/60 hover:text-white transition-all">
+                  New Trade
+                </button>
+              </div>
+            )}
+
+            {/* CTA */}
+            {txStatus !== 'done' && (
+              isActive ? (
+                canTradeOnChain ? (
+                  !publicKey ? (
+                    <button
+                      onClick={login}
+                      className="block w-full py-4 rounded-xl text-center text-sm font-bold text-white transition-all hover:brightness-110"
+                      style={{ background: '#7C3AED', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}
+                    >
+                      Sign in to Trade
+                    </button>
+                  ) : txStatus ? (
+                    <div className="text-center text-xs py-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {STATUS_MSGS[orderStatus || ''] || 'Processing...'}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleTrade}
+                      disabled={!amount || parseFloat(amount) <= 0}
+                      className="block w-full py-4 rounded-xl text-center text-sm font-bold text-white transition-all hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{ background: '#7C3AED', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}
+                    >
+                      {amount && parseFloat(amount) > 0 ? `Buy ${tradeTab.toUpperCase()} — $${amount}` : 'Enter amount'}
+                    </button>
+                  )
+                ) : (
+                  <a
+                    href={market.tradeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full py-4 rounded-xl text-center text-sm font-bold text-white transition-all hover:brightness-110"
+                    style={{ background: '#7C3AED', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}
+                  >
+                    Trade on DFlow →
+                  </a>
+                )
+              ) : (
+                <div className="w-full py-4 rounded-xl text-center text-sm font-bold uppercase tracking-widest" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)' }}>
+                  Market Closed
+                </div>
+              )
+            )}
+
             <p className={`${inter.className} text-[10px] text-center`} style={{ color: 'rgba(255,255,255,0.2)' }}>
-              Settled on Solana · Powered by DFlow x Kalshi
+              {canTradeOnChain ? 'Trades execute on-chain via Solana · Powered by DFlow × Kalshi' : 'Settled on Solana · Powered by DFlow x Kalshi'}
             </p>
           </div>
 
@@ -502,24 +762,112 @@ export default function KalshiMarketPage() {
           style={{ background: 'rgba(5,5,5,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.10)' }}
         >
           <div className="flex gap-3">
-            <a
-              href={market.tradeUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
-              style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.30)', color: '#4ade80' }}
-            >
-              Buy YES · {yesPct}¢
-            </a>
-            <a
-              href={market.tradeUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
-              style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.30)', color: '#f87171' }}
-            >
-              Buy NO · {noPct}¢
-            </a>
+            {canTradeOnChain ? (
+              <>
+                <button
+                  onClick={() => { setTradeTab('yes'); setTradeModalOpen(true); }}
+                  className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
+                  style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.30)', color: '#4ade80' }}
+                >
+                  Buy YES · {yesPct}¢
+                </button>
+                <button
+                  onClick={() => { setTradeTab('no'); setTradeModalOpen(true); }}
+                  className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
+                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.30)', color: '#f87171' }}
+                >
+                  Buy NO · {noPct}¢
+                </button>
+              </>
+            ) : (
+              <>
+                <a href={market.tradeUrl} target="_blank" rel="noreferrer" className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold" style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.30)', color: '#4ade80' }}>
+                  Buy YES · {yesPct}¢
+                </a>
+                <a href={market.tradeUrl} target="_blank" rel="noreferrer" className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.30)', color: '#f87171' }}>
+                  Buy NO · {noPct}¢
+                </a>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile trade bottom sheet */}
+      {tradeModalOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setTradeModalOpen(false)} />
+          <div className="relative rounded-t-2xl p-6 space-y-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.10)' }}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest">Trade This Market</h3>
+              <button onClick={() => setTradeModalOpen(false)} className="text-white/40 hover:text-white text-xl leading-none">×</button>
+            </div>
+
+            {/* YES/NO toggle */}
+            <div className="flex p-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.40)' }}>
+              {(['yes', 'no'] as const).map(tab => (
+                <button key={tab} onClick={() => setTradeTab(tab)}
+                  className="flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
+                  style={tradeTab === tab ? { background: tab === 'yes' ? '#22c55e' : '#ef4444', color: 'white' } : { color: 'rgba(255,255,255,0.4)' }}>
+                  Buy {tab.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest mb-2 block" style={{ color: 'rgba(255,255,255,0.4)' }}>Amount</label>
+              <div className="relative">
+                <input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00"
+                  className="w-full rounded-xl px-4 py-3 text-sm font-mono font-bold text-white pr-16 focus:outline-none"
+                  style={{ background: 'rgba(0,0,0,0.60)', border: '1px solid rgba(255,255,255,0.10)' }} />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>USDC</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-3">
+                {[1, 5, 10, 50].map(v => (
+                  <button key={v} onClick={() => setAmount(String(v))}
+                    className="py-2 rounded-lg text-xs font-bold transition-all hover:text-white"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.5)' }}>
+                    ${v}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quote */}
+            {(quoteLoading || quote || quoteError) && (
+              <div className="rounded-xl p-3 text-xs space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {quoteLoading && <div className="text-white/30">Fetching quote...</div>}
+                {quoteError && <div className="text-red-400">{quoteError}</div>}
+                {quote && !quoteLoading && (
+                  <div className="flex justify-between"><span className="text-white/40">Est. contracts</span><span className="text-white font-mono">{((quote.outAmount ?? 0) / 1e6).toFixed(2)}</span></div>
+                )}
+              </div>
+            )}
+
+            {/* Error */}
+            {txError && <div className="rounded-xl p-3 text-xs text-red-400" style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}>{txError}</div>}
+
+            {/* Status / CTA */}
+            {txStatus === 'done' ? (
+              <div className="space-y-3">
+                <div className="text-xs text-white/60">{STATUS_MSGS[orderStatus || ''] || ''}</div>
+                {txSig && <a href={`https://solscan.io/tx/${txSig}`} target="_blank" rel="noreferrer" className="text-xs text-purple-400 hover:underline block">View on Solscan →</a>}
+                <button onClick={resetTrade} className="w-full py-3 rounded-xl text-sm font-medium border border-white/10 text-white/60 hover:text-white">New Trade</button>
+              </div>
+            ) : !publicKey ? (
+              <button onClick={login} className="w-full py-4 rounded-xl text-sm font-bold text-white" style={{ background: '#7C3AED' }}>Sign in to Trade</button>
+            ) : txStatus ? (
+              <div className="text-center text-xs py-3 text-white/40">{STATUS_MSGS[orderStatus || ''] || 'Processing...'}</div>
+            ) : (
+              <button onClick={handleTrade} disabled={!amount || parseFloat(amount) <= 0}
+                className="w-full py-4 rounded-xl text-sm font-bold text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ background: tradeTab === 'yes' ? '#22c55e' : '#ef4444' }}>
+                {amount && parseFloat(amount) > 0 ? `Buy ${tradeTab.toUpperCase()} — $${amount}` : 'Enter amount'}
+              </button>
+            )}
+
+            <p className="text-[10px] text-center" style={{ color: 'rgba(255,255,255,0.2)' }}>Trades execute on-chain via Solana · Powered by DFlow × Kalshi</p>
           </div>
         </div>
       )}
