@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -30,6 +30,8 @@ interface TickerItem {
 }
 
 const ITEMS_PER_PAGE = 20;
+const SOL_MINT  = 'So11111111111111111111111111111111111111112';
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
 const MOCK_POSITIONS = [
   { id: 1, question: 'Will BTC reach $100k before May 2024?', side: 'YES', stake: 45.00, pnl: +12.40, contracts: 12.50, probability: 64 },
@@ -604,19 +606,151 @@ function Dashboard() {
     return 'Markets';
   });
   const [copied, setCopied] = useState(false);
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
+  const [showMoonPay, setShowMoonPay] = useState(false);
+  const [showSwap, setShowSwap]       = useState(false);
+  const [swapFromSol, setSwapFromSol] = useState(true);
+  const [swapAmount, setSwapAmount]   = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [swapQuote, setSwapQuote]     = useState<any>(null);
+  const [swapQuoting, setSwapQuoting] = useState(false);
+  const [swapping, setSwapping]       = useState(false);
+  const [swapSig, setSwapSig]         = useState<string | null>(null);
+  const [swapError, setSwapError]     = useState<string | null>(null);
 
-  const solWallet = wallets[0] ?? null;
-  const address = solWallet?.address ?? null;
+  // Use the same wallet the header shows — first linked Solana wallet from Privy's user object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const primaryLinkedAddr = (user?.linkedAccounts?.find((a: any) => a.type === 'wallet' && a.chainType === 'solana') as any)?.address ?? null;
+  // Find the matching wallet object so we have signing + name info
+  const solWallet = wallets.find(w => w.address === primaryLinkedAddr)
+    ?? wallets.find(w => {
+      const n = (w.standardWallet?.name ?? '').toLowerCase();
+      return !n.includes('privy') && !n.includes('embedded');
+    })
+    ?? wallets[0]
+    ?? null;
+  const address = primaryLinkedAddr ?? solWallet?.address ?? null;
   const shortAddr = address ? `${address.slice(0, 4)}...${address.slice(-4)}` : '—';
   const walletName = solWallet?.standardWallet?.name ?? '';
   const isEmbedded = walletName.toLowerCase().includes('privy') || walletName.toLowerCase().includes('embedded');
   const walletLabel = isEmbedded ? 'Embedded Wallet' : (walletName || 'Wallet');
-  const totalBalance = 124.50;
-  const solBalance = 0.42;
+  const totalBalance = usdcBalance ?? 0;
+  const displaySol = solBalance !== null ? solBalance.toFixed(4) : (address ? '…' : '—');
   const totalPnl = MOCK_POSITIONS.reduce((s, p) => s + p.pnl, 0);
   const handleCopy = () => {
     if (address) { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 1500); }
   };
+
+  useEffect(() => {
+    if (!address) { setSolBalance(null); setUsdcBalance(null); return; }
+    let cancelled = false;
+
+    (async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      try {
+        // Route through /api/solana to avoid browser CORS restrictions on public RPC
+        const [solRes, usdcRes] = await Promise.all([
+          fetch('/api/solana', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [address] }),
+            signal: ctrl.signal,
+          }),
+          fetch('/api/solana', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0', id: 2,
+              method: 'getTokenAccountsByOwner',
+              params: [
+                address,
+                { mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+                { encoding: 'jsonParsed' },
+              ],
+            }),
+            signal: ctrl.signal,
+          }),
+        ]);
+        clearTimeout(timer);
+        if (cancelled) return;
+
+        const [solData, usdcData] = await Promise.all([solRes.json(), usdcRes.json()]);
+        if (cancelled) return;
+
+        setSolBalance((solData.result?.value ?? 0) / 1e9);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const accounts: any[] = usdcData.result?.value ?? [];
+        const total = accounts.reduce((sum, acc) =>
+          sum + (acc.account?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0), 0);
+        setUsdcBalance(total);
+      } catch {
+        clearTimeout(timer);
+        if (!cancelled) { setSolBalance(0); setUsdcBalance(0); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [address]);
+
+  // Live quote whenever swap amount changes
+  useEffect(() => {
+    if (!showSwap || !swapAmount) { setSwapQuote(null); return; }
+    const n = parseFloat(swapAmount);
+    if (!n || n <= 0) { setSwapQuote(null); return; }
+    const raw = swapFromSol ? Math.round(n * 1e9) : Math.round(n * 1e6);
+    setSwapQuoting(true);
+    setSwapQuote(null);
+    setSwapError(null);
+    let live = true;
+    fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${swapFromSol ? SOL_MINT : USDC_MINT}&outputMint=${swapFromSol ? USDC_MINT : SOL_MINT}&amount=${raw}&slippageBps=50`)
+      .then(r => r.json())
+      .then(d => {
+        if (!live) return;
+        if (d.error || d.errorCode) {
+          setSwapError(d.error ?? d.errorCode ?? 'No route found.');
+        } else if (d.outAmount) {
+          setSwapQuote(d);
+        } else {
+          setSwapError('No route found for this amount.');
+        }
+        setSwapQuoting(false);
+      })
+      .catch(e => { if (live) { setSwapError(e.message ?? 'Failed to fetch quote.'); setSwapQuoting(false); } });
+    return () => { live = false; };
+  }, [swapAmount, swapFromSol, showSwap]);
+
+  const executeSwap = useCallback(async () => {
+    if (!swapQuote || !address) return;
+    setSwapping(true);
+    setSwapError(null);
+    setSwapSig(null);
+    try {
+      const res = await fetch('https://api.jup.ag/swap/v1/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteResponse: swapQuote, userPublicKey: address, wrapAndUnwrapSol: true }),
+      });
+      const { swapTransaction, error } = await res.json();
+      if (error) throw new Error(error);
+      const { VersionedTransaction } = await import('@solana/web3.js');
+      const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const phantom = (window as any).solana;
+      if (!phantom) throw new Error('Phantom wallet not found. Make sure Phantom is connected.');
+      const { signature } = await phantom.signAndSendTransaction(tx);
+      setSwapSig(signature);
+    } catch (e: unknown) {
+      setSwapError(e instanceof Error ? e.message : 'Swap failed');
+    }
+    setSwapping(false);
+  }, [swapQuote, address]);
+
+  const openJupiter = useCallback(() => {
+    setSwapSig(null); setSwapError(null); setSwapAmount(''); setSwapQuote(null);
+    setShowSwap(true);
+  }, []);
 
   const [tickerItems, setTickerItems] = useState<TickerItem[]>([
     { label: 'SOL',  price: '—', change: '...', up: true },
@@ -889,21 +1023,28 @@ function Dashboard() {
                     </div>
                   </div>
                   <div className="mt-auto mb-8">
-                    <h3 className="text-white font-bold leading-none mb-4" style={{ fontSize: '56px', letterSpacing: '-0.02em' }}>${totalBalance.toFixed(2)}</h3>
+                    <h3 className="text-white font-bold leading-none mb-4" style={{ fontSize: '56px', letterSpacing: '-0.02em' }}>
+                      {usdcBalance === null && address ? <span style={{ fontSize: '40px', opacity: 0.4 }}>Loading…</span> : `$${totalBalance.toFixed(2)}`}
+                    </h3>
                     <div className="flex items-center gap-2">
                       <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '18px' }}>USDC · Solana</span>
                       <span className="w-1 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
-                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>{solBalance} SOL</span>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '16px' }}>{displaySol} SOL</span>
                     </div>
+                    {isEmbedded && (
+                      <p className="mt-3 text-[10px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        Your embedded wallet is secured and custodied by Privy. Export your key anytime in settings.
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-4 flex-wrap">
-                    <button className="flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-white transition-all hover:opacity-90 active:scale-95" style={{ background: '#7c3aed', boxShadow: '0 0 20px rgba(124,58,237,0.4)' }}>
+                    <button onClick={() => setShowMoonPay(true)} className="flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-white transition-all hover:opacity-90 active:scale-95" style={{ background: '#7c3aed', boxShadow: '0 0 20px rgba(124,58,237,0.4)' }}>
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                       <span className="text-[10px] font-bold uppercase tracking-widest">ADD FUNDS</span>
                     </button>
-                    <button className="flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-white transition-all hover:bg-white/15 active:scale-95" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                      <span className="text-[10px] font-bold uppercase tracking-widest">SEND</span>
+                    <button onClick={openJupiter} className="flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-white transition-all hover:bg-white/15 active:scale-95" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">SWAP</span>
                     </button>
                   </div>
                 </div>
@@ -930,11 +1071,11 @@ function Dashboard() {
               <section className="col-span-12">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
-                    { label: 'Buy Crypto', sub: 'Onramp via MoonPay', icon: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg> },
-                    { label: 'Swap', sub: 'Jupiter Aggregator', icon: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg> },
-                    { label: 'Receive', sub: 'Show QR Code', icon: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg> },
+                    { label: 'Buy Crypto', sub: 'Onramp via MoonPay', onClick: () => setShowMoonPay(true), icon: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg> },
+                    { label: 'Swap', sub: 'Jupiter Aggregator', onClick: openJupiter, icon: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg> },
+                    { label: 'Receive', sub: 'Copy wallet address', onClick: handleCopy, icon: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg> },
                   ].map(action => (
-                    <button key={action.label} className="glass-card p-6 rounded-xl flex items-center gap-4 cursor-pointer group hover:bg-white/10 transition-all active:scale-[0.98] text-left w-full" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <button key={action.label} onClick={action.onClick} className="glass-card p-6 rounded-xl flex items-center gap-4 cursor-pointer group hover:bg-white/10 transition-all active:scale-[0.98] text-left w-full" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                       <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors group-hover:text-white" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>
                         {action.icon}
                       </div>
@@ -1466,6 +1607,139 @@ function Dashboard() {
         )}
         </>}
       </main>
+
+
+      {/* MoonPay modal */}
+      {showMoonPay && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowMoonPay(false); }}
+        >
+          <div className="relative w-full max-w-md mx-4 rounded-2xl overflow-hidden" style={{ background: '#0a0a0f', border: '1px solid rgba(124,58,237,0.3)' }}>
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+              <div>
+                <h3 className="text-white font-bold text-lg">Buy Crypto</h3>
+                <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Powered by MoonPay</p>
+              </div>
+              <button onClick={() => setShowMoonPay(false)} style={{ color: 'rgba(255,255,255,0.4)' }} className="hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <iframe
+              src={`https://buy-sandbox.moonpay.com?apiKey=${process.env.NEXT_PUBLIC_MOONPAY_API_KEY}&currencyCode=usdc_sol&walletAddress=${address ?? ''}&colorCode=%237c3aed&theme=dark`}
+              className="w-full"
+              style={{ height: '560px', border: 'none' }}
+              allow="accelerometer; autoplay; camera; gyroscope; payment"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── In-app Swap Modal ── */}
+      {showSwap && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowSwap(false); }}
+        >
+          <div className="w-full max-w-sm mx-4 rounded-2xl overflow-hidden" style={{ background: '#0d0d14', border: '1px solid rgba(124,58,237,0.3)' }}>
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+              <div>
+                <h3 className="text-white font-bold text-lg">Swap</h3>
+                <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Powered by Jupiter</p>
+              </div>
+              <button onClick={() => setShowSwap(false)} style={{ color: 'rgba(255,255,255,0.4)' }} className="hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              {/* From */}
+              <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>You pay</p>
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                    <span className="text-sm font-bold text-white">{swapFromSol ? 'SOL' : 'USDC'}</span>
+                  </div>
+                  <input
+                    type="number" min="0" placeholder="0.00" value={swapAmount}
+                    onChange={e => setSwapAmount(e.target.value)}
+                    className="flex-1 bg-transparent text-white text-xl font-bold focus:outline-none text-right"
+                  />
+                </div>
+                <p className="text-[10px] mt-2 text-right" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  Balance: {swapFromSol ? `${displaySol} SOL` : `$${totalBalance.toFixed(2)} USDC`}
+                </p>
+              </div>
+              {/* Flip */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => { setSwapFromSol(s => !s); setSwapAmount(''); setSwapQuote(null); }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                  style={{ background: 'rgba(124,58,237,0.2)', border: '1px solid rgba(124,58,237,0.4)' }}
+                >
+                  <svg className="w-4 h-4" style={{ color: '#c4b5fd' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                </button>
+              </div>
+              {/* To */}
+              <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>You receive</p>
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                    <span className="text-sm font-bold text-white">{swapFromSol ? 'USDC' : 'SOL'}</span>
+                  </div>
+                  <div className="flex-1 text-right">
+                    {swapQuoting
+                      ? <span className="text-xl font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>…</span>
+                      : swapQuote
+                        ? <span className="text-xl font-bold text-white">{swapFromSol ? (swapQuote.outAmount / 1e6).toFixed(4) : (swapQuote.outAmount / 1e9).toFixed(6)}</span>
+                        : <span className="text-xl font-bold" style={{ color: 'rgba(255,255,255,0.2)' }}>0.00</span>
+                    }
+                  </div>
+                </div>
+                {swapQuote && (
+                  <p className="text-[10px] mt-2 text-right" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    Price impact: {(parseFloat(swapQuote.priceImpactPct) * 100).toFixed(3)}% · Slippage 0.5%
+                  </p>
+                )}
+              </div>
+              {swapError && <p className="text-xs text-center" style={{ color: '#f87171' }}>{swapError}</p>}
+              {swapSig && (
+                <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(77,224,130,0.08)', border: '1px solid rgba(77,224,130,0.2)' }}>
+                  <p className="text-xs font-bold mb-1" style={{ color: '#4de082' }}>Swap confirmed!</p>
+                  <a href={`https://solscan.io/tx/${swapSig}`} target="_blank" rel="noopener noreferrer" className="text-[10px] underline" style={{ color: 'rgba(255,255,255,0.4)' }}>View on Solscan →</a>
+                </div>
+              )}
+              {(() => {
+                const n = parseFloat(swapAmount) || 0;
+                const hasFunds = swapFromSol ? (solBalance ?? 0) >= n : (usdcBalance ?? 0) >= n;
+                const canSwap = !!swapQuote && hasFunds && !swapping && !swapSig;
+                const label = swapping ? 'Confirm in Phantom…'
+                  : swapSig ? 'Done'
+                  : !swapAmount ? 'Enter an amount'
+                  : swapQuoting ? 'Getting quote…'
+                  : !swapQuote ? 'Swap'
+                  : !hasFunds ? `Insufficient ${swapFromSol ? 'SOL' : 'USDC'} balance`
+                  : 'Swap';
+                return (
+                  <button
+                    onClick={executeSwap}
+                    disabled={!canSwap}
+                    className="w-full py-4 rounded-xl font-bold text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed"
+                    style={{
+                      background: canSwap ? '#7c3aed' : 'rgba(124,58,237,0.3)',
+                      boxShadow: canSwap ? '0 0 24px rgba(124,58,237,0.5)' : 'none',
+                      opacity: swapping ? 0.7 : 1,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile bottom nav */}
       <nav
