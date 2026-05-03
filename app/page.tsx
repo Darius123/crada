@@ -323,36 +323,45 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
       {/* Partner Ticker */}
       <section className="py-8 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-5" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-6" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
         <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
           <div className="ticker-content whitespace-nowrap">
             {[
-              { name: 'Polymarket', color: '#ffffff' },
-              { name: 'Kalshi', color: '#ffffff' },
-              { name: 'Jupiter', color: '#63b3ed' },
-              { name: 'MoonPay', color: '#7c3aed' },
-              { name: 'Privy', color: '#ffffff' },
-              { name: 'Phantom', color: '#ab9ff2' },
-              { name: 'Solflare', color: '#fc7c1d' },
-              { name: 'DFlow', color: '#4de082' },
-              { name: 'SNS', color: '#ffffff' },
-              { name: 'AllDomains', color: '#ffffff' },
-              { name: 'Solana', color: '#9945FF' },
-              { name: 'Polymarket', color: '#ffffff' },
-              { name: 'Kalshi', color: '#ffffff' },
-              { name: 'Jupiter', color: '#63b3ed' },
-              { name: 'MoonPay', color: '#7c3aed' },
-              { name: 'Privy', color: '#ffffff' },
-              { name: 'Phantom', color: '#ab9ff2' },
-              { name: 'Solflare', color: '#fc7c1d' },
-              { name: 'DFlow', color: '#4de082' },
-              { name: 'SNS', color: '#ffffff' },
-              { name: 'AllDomains', color: '#ffffff' },
-              { name: 'Solana', color: '#9945FF' },
+              { name: 'Polymarket', domain: 'polymarket.com' },
+              { name: 'Kalshi', domain: 'kalshi.com' },
+              { name: 'Jupiter', domain: 'jup.ag' },
+              { name: 'MoonPay', domain: 'moonpay.com' },
+              { name: 'Privy', domain: 'privy.io' },
+              { name: 'Phantom', domain: 'phantom.app' },
+              { name: 'Solflare', domain: 'solflare.com' },
+              { name: 'DFlow', domain: 'dflow.net' },
+              { name: 'SNS', domain: 'sns.id' },
+              { name: 'AllDomains', domain: 'alldomains.id' },
+              { name: 'Solana', domain: 'solana.com' },
+              { name: 'Polymarket', domain: 'polymarket.com' },
+              { name: 'Kalshi', domain: 'kalshi.com' },
+              { name: 'Jupiter', domain: 'jup.ag' },
+              { name: 'MoonPay', domain: 'moonpay.com' },
+              { name: 'Privy', domain: 'privy.io' },
+              { name: 'Phantom', domain: 'phantom.app' },
+              { name: 'Solflare', domain: 'solflare.com' },
+              { name: 'DFlow', domain: 'dflow.net' },
+              { name: 'SNS', domain: 'sns.id' },
+              { name: 'AllDomains', domain: 'alldomains.id' },
+              { name: 'Solana', domain: 'solana.com' },
             ].map((p, i) => (
-              <span key={i} className="inline-flex items-center gap-6 px-8">
-                <span className="text-base font-bold tracking-tight" style={{ color: p.color, opacity: 0.65 }}>{p.name}</span>
-                <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
+              <span key={i} className="inline-flex items-center gap-3 px-8">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${p.domain}&sz=64`}
+                  alt={p.name}
+                  width={24}
+                  height={24}
+                  className="rounded-md opacity-80"
+                  style={{ imageRendering: 'auto' }}
+                />
+                <span className="text-sm font-semibold tracking-tight text-white" style={{ opacity: 0.7 }}>{p.name}</span>
+                <span className="pl-4" style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
               </span>
             ))}
           </div>
