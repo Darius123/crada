@@ -321,6 +321,44 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
         </div>
       </section>
 
+      {/* Partner Ticker */}
+      <section className="py-8 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-5" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
+        <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
+          <div className="ticker-content whitespace-nowrap">
+            {[
+              { name: 'Polymarket', color: '#ffffff' },
+              { name: 'Kalshi', color: '#ffffff' },
+              { name: 'Jupiter', color: '#63b3ed' },
+              { name: 'MoonPay', color: '#7c3aed' },
+              { name: 'Privy', color: '#ffffff' },
+              { name: 'Phantom', color: '#ab9ff2' },
+              { name: 'Solflare', color: '#fc7c1d' },
+              { name: 'DFlow', color: '#4de082' },
+              { name: 'SNS', color: '#ffffff' },
+              { name: 'AllDomains', color: '#ffffff' },
+              { name: 'Solana', color: '#9945FF' },
+              { name: 'Polymarket', color: '#ffffff' },
+              { name: 'Kalshi', color: '#ffffff' },
+              { name: 'Jupiter', color: '#63b3ed' },
+              { name: 'MoonPay', color: '#7c3aed' },
+              { name: 'Privy', color: '#ffffff' },
+              { name: 'Phantom', color: '#ab9ff2' },
+              { name: 'Solflare', color: '#fc7c1d' },
+              { name: 'DFlow', color: '#4de082' },
+              { name: 'SNS', color: '#ffffff' },
+              { name: 'AllDomains', color: '#ffffff' },
+              { name: 'Solana', color: '#9945FF' },
+            ].map((p, i) => (
+              <span key={i} className="inline-flex items-center gap-6 px-8">
+                <span className="text-base font-bold tracking-tight" style={{ color: p.color, opacity: 0.65 }}>{p.name}</span>
+                <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="py-16 sm:py-32 px-5 sm:px-8 max-w-[1280px] mx-auto">
         <div className="mb-16 text-center">
