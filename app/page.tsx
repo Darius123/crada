@@ -606,6 +606,7 @@ function Dashboard() {
     return 'Markets';
   });
   const [copied, setCopied] = useState(false);
+  const [solanaId, setSolanaId] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [showMoonPay, setShowMoonPay] = useState(false);
@@ -692,6 +693,15 @@ function Dashboard() {
       }
     })();
     return () => { cancelled = true; };
+  }, [address]);
+
+  // Resolve .sol / .solana domain for connected wallet
+  useEffect(() => {
+    if (!address) { setSolanaId(null); return; }
+    fetch(`/api/domain?address=${address}`)
+      .then(r => r.json())
+      .then(d => setSolanaId(d.domain ?? null))
+      .catch(() => {});
   }, [address]);
 
   // Live quote whenever swap amount changes
@@ -1004,6 +1014,9 @@ function Dashboard() {
                   <div className="flex justify-between items-start mb-8">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>MY WALLET</p>
+                      {solanaId && (
+                        <p className="text-xl font-bold mb-2" style={{ color: '#c4b5fd' }}>{solanaId}</p>
+                      )}
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="text-sm font-mono px-3 py-1.5 rounded-lg" style={{ color: 'white', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)', letterSpacing: '0.1em' }}>{shortAddr}</span>
                         {address && (

@@ -20,6 +20,7 @@ interface Signal {
   explanation: string;
   confidence: number;
   minsAgo: number;
+  topWallets?: string[];
 }
 
 const sharedStyles = `
@@ -46,6 +47,7 @@ export default function SignalsPage() {
   const [loading, setLoading] = useState(true);
   const [feedTab, setFeedTab] = useState<'live' | 'history' | 'filters'>('live');
   const [activeSideNav, setActiveSideNav] = useState('Signals');
+  const [walletDomains, setWalletDomains] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -63,6 +65,17 @@ export default function SignalsPage() {
         }));
         setSignals(list);
         setLoading(false);
+
+        // Resolve domains for all wallet addresses in insider signals
+        const addresses: string[] = [];
+        list.forEach((s: Signal) => { if (s.topWallets) addresses.push(...s.topWallets); });
+        const unique = [...new Set(addresses)];
+        unique.forEach(addr => {
+          fetch(`/api/domain?address=${addr}`)
+            .then(r => r.json())
+            .then(d => { if (d.domain) setWalletDomains(prev => ({ ...prev, [addr]: d.domain })); })
+            .catch(() => {});
+        });
       })
       .catch(() => setLoading(false));
   }, []);
@@ -352,9 +365,19 @@ export default function SignalsPage() {
                         >
                           {signal.question}
                         </p>
-                        <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                          {signal.category || signal.signalType}
-                        </p>
+                        {signal.topWallets && signal.topWallets.length > 0 ? (
+                          <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                            {signal.topWallets.slice(0, 3).map(addr => (
+                              <span key={addr} className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(196,181,253,0.1)', color: '#c4b5fd' }}>
+                                {walletDomains[addr] ?? `${addr.slice(0, 4)}…${addr.slice(-4)}`}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            {signal.category || signal.signalType}
+                          </p>
+                        )}
                       </div>
                     </div>
 

@@ -35,6 +35,11 @@ async function detectInsiderActivity(markets: any[]) {
           prob = parseFloat(prices[0]);
         } catch {}
 
+        // Include up to 3 real wallet addresses so the frontend can resolve domains
+        const topWallets = [...uniqueAddresses]
+          .filter(a => typeof a === 'string' && a.length > 20 && !a.startsWith('0x'))
+          .slice(0, 3);
+
         insiderSignals.push({
           id: m.id,
           question: m.question,
@@ -45,6 +50,7 @@ async function detectInsiderActivity(markets: any[]) {
           typeBadge: 'purple',
           explanation: `${uniqueAddresses.size} wallets placed coordinated positions totalling $${(totalValue / 1000).toFixed(1)}K in the last 30 minutes. Pattern matches prior insider activity detected on this platform.`,
           confidence: Math.min(95, 60 + uniqueAddresses.size * 5 + Math.floor(totalValue / 1000)),
+          topWallets,
         });
       }
     } catch {}
