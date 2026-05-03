@@ -56,6 +56,18 @@ export default function LandingPage() {
         .animate-ping {
           animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        .ticker-track {
+          display: flex;
+          width: max-content;
+          animation: ticker 28s linear infinite;
+        }
+        .ticker-track:hover {
+          animation-play-state: paused;
+        }
       `}</style>
 
       {/* Header */}
@@ -173,6 +185,53 @@ export default function LandingPage() {
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Partner Ticker */}
+        <section className="border-b border-white/5 py-6 overflow-hidden relative" style={{ background: 'rgba(255,255,255,0.01)' }}>
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-5" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
+          <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
+            <div className="ticker-track">
+              {[
+                { name: 'Polymarket', color: '#ffffff' },
+                { name: 'Kalshi', color: '#ffffff' },
+                { name: 'Jupiter', color: '#63b3ed' },
+                { name: 'MoonPay', color: '#7c3aed' },
+                { name: 'Privy', color: '#ffffff' },
+                { name: 'Phantom', color: '#ab9ff2' },
+                { name: 'Solflare', color: '#fc7c1d' },
+                { name: 'DFlow', color: '#4de082' },
+                { name: 'SNS', color: '#ffffff' },
+                { name: 'AllDomains', color: '#ffffff' },
+                { name: 'Solana', color: '#9945FF' },
+                // duplicated for seamless loop
+                { name: 'Polymarket', color: '#ffffff' },
+                { name: 'Kalshi', color: '#ffffff' },
+                { name: 'Jupiter', color: '#63b3ed' },
+                { name: 'MoonPay', color: '#7c3aed' },
+                { name: 'Privy', color: '#ffffff' },
+                { name: 'Phantom', color: '#ab9ff2' },
+                { name: 'Solflare', color: '#fc7c1d' },
+                { name: 'DFlow', color: '#4de082' },
+                { name: 'SNS', color: '#ffffff' },
+                { name: 'AllDomains', color: '#ffffff' },
+                { name: 'Solana', color: '#9945FF' },
+              ].map((partner, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-6 px-10"
+                >
+                  <span
+                    className="text-lg font-bold tracking-tight whitespace-nowrap"
+                    style={{ color: partner.color, opacity: 0.7 }}
+                  >
+                    {partner.name}
+                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: '20px' }}>·</span>
+                </span>
+              ))}
             </div>
           </div>
         </section>
