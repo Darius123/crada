@@ -34,17 +34,6 @@ const ITEMS_PER_PAGE = 20;
 const SOL_MINT  = 'So11111111111111111111111111111111111111112';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-const MOCK_POSITIONS = [
-  { id: 1, question: 'Will BTC reach $100k before May 2024?', side: 'YES', stake: 45.00, pnl: +12.40, contracts: 12.50, probability: 64 },
-  { id: 2, question: 'Fed Rate Cut in June?', side: 'NO', stake: 20.00, pnl: -3.15, contracts: 8.20, probability: 38 },
-  { id: 3, question: 'SOL ATH in 2026?', side: 'YES', stake: 10.00, pnl: +5.80, contracts: 5.00, probability: 71 },
-];
-
-const MOCK_ACTIVITY = [
-  { id: 1, type: 'buy', label: 'Bought YES · Tech Layoffs 2026', time: '2 hours ago', amount: -10.00, status: 'CONFIRMED', txUrl: '#' },
-  { id: 2, type: 'deposit', label: 'Funds Added · Phantom', time: '5 hours ago', amount: +50.00, status: 'CONFIRMED', txUrl: '#' },
-  { id: 3, type: 'sell', label: 'Sold NO · ETH $5k Q1', time: '1 day ago', amount: +24.50, status: 'CONFIRMED', txUrl: '#' },
-];
 
 const lineClamp2: React.CSSProperties = {
   display: '-webkit-box' as React.CSSProperties['display'],
@@ -684,7 +673,6 @@ function Dashboard() {
   const walletLabel = isEmbedded ? 'Embedded Wallet' : (walletName || 'Wallet');
   const totalBalance = usdcBalance ?? 0;
   const displaySol = solBalance !== null ? solBalance.toFixed(4) : (address ? '…' : '—');
-  const totalPnl = MOCK_POSITIONS.reduce((s, p) => s + p.pnl, 0);
   const handleCopy = () => {
     if (address) { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 1500); }
   };
@@ -1160,47 +1148,20 @@ function Dashboard() {
               <section className="col-span-12 lg:col-span-7">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-bold text-2xl">Open Positions</h3>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>1 ACTIVE</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>0 ACTIVE</span>
                 </div>
-                <div className="space-y-4">
-                  {/* Active position card */}
-                  <div className="glass-card p-4 rounded-xl group hover:border-violet-500/50 transition-colors" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex-1 mr-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(77,224,130,0.10)', color: '#4de082', border: '1px solid rgba(77,224,130,0.20)' }}>YES</span>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>PREDICTION MARKET</span>
-                        </div>
-                        <h4 className="text-white font-bold text-lg leading-tight">Will BTC reach $100k before May 2024?</h4>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-white font-bold text-xl">$8.75</p>
-                        <p className="text-sm font-bold" style={{ color: '#4de082' }}>+ $1.25 (14.2%)</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>SIZE</p>
-                        <p className="text-sm font-bold text-white" style={{ letterSpacing: '0.1em' }}>12.50 CONTRACTS</p>
-                      </div>
-                      <div className="p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>PROBABILITY</p>
-                        <p className="text-sm font-bold text-white" style={{ letterSpacing: '0.1em' }}>64% MARKET ODDS</p>
-                      </div>
-                    </div>
-                    <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                      <div className="h-full rounded-full" style={{ width: '64%', background: '#7c3aed', boxShadow: '0 0 10px #7c3aed' }} />
-                    </div>
-                  </div>
-
-                  {/* Empty limit orders state */}
-                  <div className="glass-card p-12 rounded-xl flex flex-col items-center justify-center text-center" style={{ border: '1px dashed rgba(255,255,255,0.1)', opacity: 0.6 }}>
-                    <svg className="w-10 h-10 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>NO LIMIT ORDERS</p>
-                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>Your active limit orders will appear here.</p>
-                  </div>
+                <div className="glass-card rounded-xl flex flex-col items-center justify-center py-16 text-center gap-3">
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'rgba(255,255,255,0.12)' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>No open positions yet</p>
+                  <button
+                    onClick={() => setActiveSideNav('Markets')}
+                    className="text-xs font-bold px-4 py-2 rounded-lg transition-all hover:brightness-110"
+                    style={{ background: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }}
+                  >
+                    Browse Markets →
+                  </button>
                 </div>
               </section>
 
@@ -1208,82 +1169,20 @@ function Dashboard() {
               <section className="col-span-12 lg:col-span-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-bold text-2xl">Recent Activity</h3>
-                  <button className="text-[10px] font-bold uppercase tracking-[0.2em] hover:underline" style={{ color: '#d2bbff' }}>VIEW ALL</button>
+                  <button
+                    onClick={() => router.push('/coming-soon')}
+                    className="text-[10px] font-bold uppercase tracking-[0.2em] hover:underline"
+                    style={{ color: '#d2bbff' }}
+                  >
+                    VIEW ALL
+                  </button>
                 </div>
-                <div className="glass-card rounded-xl overflow-hidden divide-y divide-white/5" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-                  {/* Item 1 — Buy */}
-                  <div className="p-4 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(77,224,130,0.10)', border: '1px solid rgba(77,224,130,0.10)', color: '#4de082' }}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                      </div>
-                      <div>
-                        <p className="text-white font-medium text-sm">Bought YES · Tech Layoffs 2026</p>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>2 HOURS AGO</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-3">
-                      <div>
-                        <p className="text-white text-sm font-bold" style={{ letterSpacing: '0.1em' }}>-$10.00 USDC</p>
-                        <p className="text-[10px] font-bold uppercase" style={{ color: 'rgba(255,255,255,0.2)' }}>CONFIRMED</p>
-                      </div>
-                      <button style={{ color: 'rgba(255,255,255,0.2)' }} className="hover:text-white transition-colors">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                  {/* Item 2 — Deposit */}
-                  <div className="p-4 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.10)', color: '#c4b5fd' }}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                      </div>
-                      <div>
-                        <p className="text-white font-medium text-sm">Funds Added · Phantom</p>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>5 HOURS AGO</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-3">
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: '#4de082', letterSpacing: '0.1em' }}>+$50.00 USDC</p>
-                        <p className="text-[10px] font-bold uppercase" style={{ color: 'rgba(255,255,255,0.2)' }}>CONFIRMED</p>
-                      </div>
-                      <button style={{ color: 'rgba(255,255,255,0.2)' }} className="hover:text-white transition-colors">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                  {/* Item 3 — Sell */}
-                  <div className="p-4 flex items-center justify-between group hover:bg-white/5 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.10)', color: '#f87171' }}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      </div>
-                      <div>
-                        <p className="text-white font-medium text-sm">Sold NO · ETH $5k Q1</p>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>1 DAY AGO</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-3">
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '0.1em' }}>+$24.50 USDC</p>
-                        <p className="text-[10px] font-bold uppercase" style={{ color: 'rgba(255,255,255,0.2)' }}>CONFIRMED</p>
-                      </div>
-                      <button style={{ color: 'rgba(255,255,255,0.2)' }} className="hover:text-white transition-colors">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                  {/* Governance Alert — inside activity card */}
-                  <div className="p-4 relative overflow-hidden" style={{ background: 'rgba(124,58,237,0.05)' }}>
-                    <div className="relative z-10 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-bold" style={{ color: '#c4b5fd' }}>GOVERNANCE ALERT</p>
-                        <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.6)' }}>Vote on Proposal #082: Fee Restructuring</p>
-                      </div>
-                      <button className="text-[10px] px-3 py-1 rounded font-bold text-white" style={{ background: '#7c3aed' }}>VOTE</button>
-                    </div>
-                  </div>
+                <div className="glass-card rounded-xl flex flex-col items-center justify-center py-16 text-center gap-3">
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'rgba(255,255,255,0.12)' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>No recent activity</p>
+                  <p className="text-xs px-6" style={{ color: 'rgba(255,255,255,0.18)' }}>Your trades and transactions will appear here</p>
                 </div>
               </section>
 
