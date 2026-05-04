@@ -323,28 +323,39 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
       {/* Partner Ticker */}
       {(() => {
-        const partners: { src: string; name: string; h: number; invert?: boolean }[] = [
-          { src: '/logos/solana.svg',   name: 'Solana',    h: 18 },
-          { src: '/logos/jupiter.svg',  name: 'Jupiter',   h: 20, invert: true },
-          { src: '/logos/phantom.svg',  name: 'Phantom',   h: 20, invert: true },
-          { src: '/logos/kalshi.svg',   name: 'Kalshi',    h: 18 },
-          { src: '/logos/moonpay.svg',  name: 'MoonPay',   h: 20 },
-          { src: '/logos/solflare.svg', name: 'Solflare',  h: 20, invert: true },
+        type Partner = { name: string; svg?: string; invert?: boolean };
+        const partners: Partner[] = [
+          { name: 'Polymarket', svg: '/logos/polymarket.png', invert: true },
+          { name: 'Kalshi',     svg: '/logos/kalshi.svg' },
+          { name: 'Jupiter' },
+          { name: 'MoonPay',   svg: '/logos/moonpay.svg' },
+          { name: 'Privy' },
+          { name: 'Phantom',   svg: '/logos/phantom.svg',  invert: true },
+          { name: 'Solflare',  svg: '/logos/solflare.svg', invert: true },
+          { name: 'DFlow' },
+          { name: 'SNS' },
+          { name: 'AllDomains' },
+          { name: 'Solana',    svg: '/logos/solana.svg' },
         ];
         const all = [...partners, ...partners];
         return (
           <section className="py-8 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-7" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-6" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
             <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
-              <div className="ticker-content">
+              <div className="ticker-content" style={{ whiteSpace: 'nowrap' }}>
                 {all.map((p, i) => (
-                  <span key={i} className="inline-flex items-center" style={{ padding: '0 48px', gap: 0 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={p.src}
-                      alt={p.name}
-                      style={{ height: p.h, width: 'auto', opacity: 0.7, filter: p.invert ? 'brightness(0) invert(1)' : 'none' }}
-                    />
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '0 40px' }}>
+                    {p.svg ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.svg}
+                        alt={p.name}
+                        style={{ height: 20, width: 'auto', opacity: 0.65, filter: p.invert ? 'brightness(0) invert(1)' : 'none', display: 'block' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: '-0.01em' }}>{p.name}</span>
+                    )}
+                    <span style={{ marginLeft: 40, color: 'rgba(255,255,255,0.1)', fontSize: 18 }}>·</span>
                   </span>
                 ))}
               </div>
