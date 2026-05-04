@@ -323,7 +323,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
       {/* Partner Ticker */}
       {(() => {
-        type Partner = { name: string; svg?: string; invert?: boolean };
+        type Partner = { name: string; svg?: string; invert?: boolean; icon?: string };
         const partners: Partner[] = [
           { name: 'Polymarket', svg: '/logos/polymarket.png', invert: true },
           { name: 'Kalshi',     svg: '/logos/kalshi.svg' },
@@ -332,7 +332,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           { name: 'Privy',      svg: '/logos/privy.svg',   invert: true },
           { name: 'Phantom',   svg: '/logos/phantom.svg',  invert: true },
           { name: 'Solflare',  svg: '/logos/solflare.svg', invert: true },
-          { name: 'DFlow' },
+          { name: 'DFlow',     icon: '/logos/dflow.svg' },
           { name: 'SNS' },
           { name: 'AllDomains' },
           { name: 'Solana',    svg: '/logos/solana.svg' },
@@ -347,11 +347,13 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
                   <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '0 40px' }}>
                     {p.svg ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.svg}
-                        alt={p.name}
-                        style={{ height: 20, width: 'auto', opacity: 0.65, filter: p.invert ? 'brightness(0) invert(1)' : 'none', display: 'block' }}
-                      />
+                      <img src={p.svg} alt={p.name} style={{ height: 20, width: 'auto', opacity: 0.65, filter: p.invert ? 'brightness(0) invert(1)' : 'none', display: 'block' }} />
+                    ) : p.icon ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.icon} alt="" style={{ height: 18, width: 'auto', opacity: 0.65, display: 'block' }} />
+                        <span style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: '-0.01em' }}>{p.name}</span>
+                      </span>
                     ) : (
                       <span style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: '-0.01em' }}>{p.name}</span>
                     )}
