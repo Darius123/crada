@@ -323,47 +323,37 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
       {/* Partner Ticker */}
       <section className="py-8 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-6" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-7" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
         <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
           <div className="ticker-content whitespace-nowrap">
-            {[
-              { name: 'Polymarket', domain: 'polymarket.com' },
-              { name: 'Kalshi', domain: 'kalshi.com' },
-              { name: 'Jupiter', domain: 'jup.ag' },
-              { name: 'MoonPay', domain: 'moonpay.com' },
-              { name: 'Privy', domain: 'privy.io' },
-              { name: 'Phantom', domain: 'phantom.app' },
-              { name: 'Solflare', domain: 'solflare.com' },
-              { name: 'DFlow', domain: 'dflow.net' },
-              { name: 'SNS', domain: 'sns.id' },
-              { name: 'AllDomains', domain: 'alldomains.id' },
-              { name: 'Solana', domain: 'solana.com' },
-              { name: 'Polymarket', domain: 'polymarket.com' },
-              { name: 'Kalshi', domain: 'kalshi.com' },
-              { name: 'Jupiter', domain: 'jup.ag' },
-              { name: 'MoonPay', domain: 'moonpay.com' },
-              { name: 'Privy', domain: 'privy.io' },
-              { name: 'Phantom', domain: 'phantom.app' },
-              { name: 'Solflare', domain: 'solflare.com' },
-              { name: 'DFlow', domain: 'dflow.net' },
-              { name: 'SNS', domain: 'sns.id' },
-              { name: 'AllDomains', domain: 'alldomains.id' },
-              { name: 'Solana', domain: 'solana.com' },
-            ].map((p, i) => (
-              <span key={i} className="inline-flex items-center gap-3 px-8">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${p.domain}&sz=64`}
-                  alt={p.name}
-                  width={24}
-                  height={24}
-                  className="rounded-md opacity-80"
-                  style={{ imageRendering: 'auto' }}
-                />
-                <span className="text-sm font-semibold tracking-tight text-white" style={{ opacity: 0.7 }}>{p.name}</span>
-                <span className="pl-4" style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
-              </span>
-            ))}
+            {([
+              { src: '/logos/polymarket.png', name: 'Polymarket', h: 22 },
+              { src: '/logos/kalshi.svg',     name: 'Kalshi',     h: 20 },
+              { src: '/logos/jupiter.svg',    name: 'Jupiter',    h: 22 },
+              { src: '/logos/moonpay.svg',    name: 'MoonPay',    h: 22 },
+              { src: '/logos/privy.png',      name: 'Privy',      h: 22 },
+              { src: '/logos/phantom.svg',    name: 'Phantom',    h: 22 },
+              { src: '/logos/solflare.svg',   name: 'Solflare',   h: 22 },
+              { src: null,                    name: 'DFlow',      h: 22, domain: 'dflow.net' },
+              { src: null,                    name: 'SNS',        h: 22, domain: 'sns.id' },
+              { src: '/logos/solana.svg',     name: 'Solana',     h: 20 },
+            ] as { src: string | null; name: string; h: number; domain?: string }[])
+              .flatMap(p => [p, { ...p, _dup: true }])
+              .map((p, i) => (
+                <span key={i} className="inline-flex items-center px-10" style={{ gap: '40px' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p.src ? (
+                    <img src={p.src} alt={p.name} height={p.h} style={{ height: p.h, width: 'auto', opacity: 0.75, filter: 'brightness(0) invert(1)' }} />
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`https://www.google.com/s2/favicons?domain=${p.domain}&sz=32`} alt={p.name} height={16} width={16} style={{ opacity: 0.7 }} />
+                      <span className="text-sm font-semibold text-white" style={{ opacity: 0.65 }}>{p.name}</span>
+                    </span>
+                  )}
+                  <span style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
+                </span>
+              ))}
           </div>
         </div>
       </section>
