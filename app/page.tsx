@@ -329,7 +329,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           { name: 'Kalshi',     svg: '/logos/kalshi.svg' },
           { name: 'Jupiter' },
           { name: 'MoonPay',   svg: '/logos/moonpay.svg' },
-          { name: 'Privy' },
+          { name: 'Privy',      svg: '/logos/privy.svg',   invert: true },
           { name: 'Phantom',   svg: '/logos/phantom.svg',  invert: true },
           { name: 'Solflare',  svg: '/logos/solflare.svg', invert: true },
           { name: 'DFlow' },
