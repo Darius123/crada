@@ -646,6 +646,7 @@ function Dashboard() {
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [showMoonPay, setShowMoonPay] = useState(false);
   const [showSwap, setShowSwap]       = useState(false);
+  const [showAllActivity, setShowAllActivity] = useState(false);
   const [swapFromSol, setSwapFromSol] = useState(true);
   const [swapAmount, setSwapAmount]   = useState('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1170,7 +1171,7 @@ function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-bold text-2xl">Recent Activity</h3>
                   <button
-                    onClick={() => router.push('/coming-soon')}
+                    onClick={() => setShowAllActivity(true)}
                     className="text-[10px] font-bold uppercase tracking-[0.2em] hover:underline"
                     style={{ color: '#d2bbff' }}
                   >
@@ -1187,6 +1188,48 @@ function Dashboard() {
               </section>
 
             </div>
+
+            {/* All Activity modal */}
+            {showAllActivity && (
+              <div
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6"
+                style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+                onClick={() => setShowAllActivity(false)}
+              >
+                <div
+                  className="w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl overflow-hidden"
+                  style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.10)', maxHeight: '80vh' }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div>
+                      <h3 className="text-base font-bold text-white">All Activity</h3>
+                      <p className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>Transaction history</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAllActivity(false)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+                      style={{ color: 'rgba(255,255,255,0.4)' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto" style={{ maxHeight: 'calc(80vh - 72px)' }}>
+                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
+                      <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'rgba(255,255,255,0.10)' }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>No activity yet</p>
+                      <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.18)' }}>
+                        Once you start trading, all your transactions<br />will appear here in real time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
