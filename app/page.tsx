@@ -327,7 +327,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
         const partners: Partner[] = [
           { name: 'Polymarket', svg: '/logos/polymarket.png', invert: true },
           { name: 'Kalshi',     svg: '/logos/kalshi.svg' },
-          { name: 'Jupiter' },
+          { name: 'Jupiter',    svg: '/logos/jupiter.svg' },
           { name: 'MoonPay',   svg: '/logos/moonpay.svg' },
           { name: 'Privy',      svg: '/logos/privy.svg',   invert: true },
           { name: 'Phantom',   svg: '/logos/phantom.svg',  invert: true },
