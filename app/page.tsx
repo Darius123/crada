@@ -322,41 +322,36 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
       </section>
 
       {/* Partner Ticker */}
-      <section className="py-8 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-7" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
-        <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
-          <div className="ticker-content whitespace-nowrap">
-            {([
-              { src: '/logos/polymarket.png', name: 'Polymarket', h: 22 },
-              { src: '/logos/kalshi.svg',     name: 'Kalshi',     h: 20 },
-              { src: '/logos/jupiter.svg',    name: 'Jupiter',    h: 22 },
-              { src: '/logos/moonpay.svg',    name: 'MoonPay',    h: 22 },
-              { src: '/logos/privy.png',      name: 'Privy',      h: 22 },
-              { src: '/logos/phantom.svg',    name: 'Phantom',    h: 22 },
-              { src: '/logos/solflare.svg',   name: 'Solflare',   h: 22 },
-              { src: null,                    name: 'DFlow',      h: 22, domain: 'dflow.net' },
-              { src: null,                    name: 'SNS',        h: 22, domain: 'sns.id' },
-              { src: '/logos/solana.svg',     name: 'Solana',     h: 20 },
-            ] as { src: string | null; name: string; h: number; domain?: string }[])
-              .flatMap(p => [p, { ...p, _dup: true }])
-              .map((p, i) => (
-                <span key={i} className="inline-flex items-center px-10" style={{ gap: '40px' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {p.src ? (
-                    <img src={p.src} alt={p.name} height={p.h} style={{ height: p.h, width: 'auto', opacity: 0.75, filter: 'brightness(0) invert(1)' }} />
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`https://www.google.com/s2/favicons?domain=${p.domain}&sz=32`} alt={p.name} height={16} width={16} style={{ opacity: 0.7 }} />
-                      <span className="text-sm font-semibold text-white" style={{ opacity: 0.65 }}>{p.name}</span>
-                    </span>
-                  )}
-                  <span style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
-                </span>
-              ))}
-          </div>
-        </div>
-      </section>
+      {(() => {
+        const partners: { src: string; name: string; h: number; invert?: boolean }[] = [
+          { src: '/logos/solana.svg',   name: 'Solana',    h: 18 },
+          { src: '/logos/jupiter.svg',  name: 'Jupiter',   h: 20, invert: true },
+          { src: '/logos/phantom.svg',  name: 'Phantom',   h: 20, invert: true },
+          { src: '/logos/kalshi.svg',   name: 'Kalshi',    h: 18 },
+          { src: '/logos/moonpay.svg',  name: 'MoonPay',   h: 20 },
+          { src: '/logos/solflare.svg', name: 'Solflare',  h: 20, invert: true },
+        ];
+        const all = [...partners, ...partners];
+        return (
+          <section className="py-8 overflow-hidden" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.25em] mb-7" style={{ color: 'rgba(255,255,255,0.2)' }}>Powered by</p>
+            <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)' }}>
+              <div className="ticker-content">
+                {all.map((p, i) => (
+                  <span key={i} className="inline-flex items-center" style={{ padding: '0 48px', gap: 0 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.src}
+                      alt={p.name}
+                      style={{ height: p.h, width: 'auto', opacity: 0.7, filter: p.invert ? 'brightness(0) invert(1)' : 'none' }}
+                    />
+                  </span>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Features Section */}
       <section className="py-16 sm:py-32 px-5 sm:px-8 max-w-[1280px] mx-auto">
