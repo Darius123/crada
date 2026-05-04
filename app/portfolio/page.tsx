@@ -67,7 +67,7 @@ export default function PortfolioPage() {
         style={{ background: 'rgba(5,5,5,0.90)', backdropFilter: 'blur(24px)', borderBottomColor: 'rgba(255,255,255,0.08)' }}
       >
         <button onClick={() => router.push('/')}>
-          <img src="/crada-logo.png" alt="Crada" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
+          <img src="/crada-logo.png" alt="Crada" style={{ height: '56px', width: 'auto', objectFit: 'contain' }} />
         </button>
         <div className="hidden md:flex items-center gap-6 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>
           <button onClick={() => router.push('/')} className="hover:text-white transition-colors">Markets</button>

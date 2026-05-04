@@ -13,12 +13,12 @@ function extractKeywords(question: string): string {
   return question
     .replace(/[^a-zA-Z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length > 3 && !STOP_WORDS.has(w.toLowerCase()))
-    .slice(0, 5)
+    .filter(w => w.length > 2 && !STOP_WORDS.has(w.toLowerCase()))
+    .slice(0, 6)
     .join(' ');
 }
 
-function inferSentiment(title: string): 'yes' | 'no' | 'neutral' {
+function inferSentiment(title: string): string {
   const t = title.toLowerCase();
   const YES_WORDS = [
     'wins', 'win', 'victory', 'elected', 'passes', 'approved', 'confirms',
@@ -38,6 +38,23 @@ function inferSentiment(title: string): 'yes' | 'no' | 'neutral' {
 
   if (yesHits > noHits) return 'yes';
   if (noHits > yesHits) return 'no';
+  return 'neutral';
+}
+
+function inferOutcomeSentiment(title: string, outcomes: string[]): string {
+  const t = title.toLowerCase();
+  for (const outcome of outcomes) {
+    if (outcome.length <= 2) continue;
+    // Exact phrase match first
+    if (t.includes(outcome.toLowerCase())) return outcome;
+    // Word-level match — catches "Forest" matching "Nottingham Forest FC"
+    // Use > 4 threshold to avoid generic words like "team", "city", "draw" firing everywhere
+    const words = outcome.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 4 && !STOP_WORDS.has(w));
+    if (words.length > 0 && words.some(w => t.includes(w))) return outcome;
+  }
   return 'neutral';
 }
 
@@ -69,9 +86,24 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const marketRes = await fetch(`https://gamma-api.polymarket.com/markets?id=${id}`, { cache: 'no-store' });
-    const marketData = await marketRes.json();
-    const question: string = (Array.isArray(marketData) ? marketData[0] : marketData)?.question || '';
+    let question = '';
+    const outcomes: string[] = [];
+
+    if (id.startsWith('event_')) {
+      const eventId = id.replace('event_', '');
+      const eventRes = await fetch(`https://gamma-api.polymarket.com/events?id=${eventId}`, { cache: 'no-store' });
+      const eventData = await eventRes.json();
+      const event = Array.isArray(eventData) ? eventData[0] : eventData;
+      question = event?.title || '';
+      for (const m of event?.markets ?? []) {
+        const name: string = m.groupItemTitle || m.question || '';
+        if (name) outcomes.push(name);
+      }
+    } else {
+      const marketRes = await fetch(`https://gamma-api.polymarket.com/markets?id=${id}`, { cache: 'no-store' });
+      const marketData = await marketRes.json();
+      question = (Array.isArray(marketData) ? marketData[0] : marketData)?.question || '';
+    }
 
     if (!question) return NextResponse.json({ news: [] });
 
@@ -93,7 +125,9 @@ export async function GET(
         link: item.link,
         source: item.source,
         minsAgo,
-        sentiment: inferSentiment(item.title),
+        sentiment: outcomes.length > 0
+          ? inferOutcomeSentiment(item.title, outcomes)
+          : inferSentiment(item.title),
       };
     });
 

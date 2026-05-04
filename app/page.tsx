@@ -20,6 +20,7 @@ interface Market {
   image?: string;
   tradeUrl?: string;
   priceChange?: number | null;
+  outcomes?: { name: string; probability: number }[];
 }
 
 interface TickerItem {
@@ -157,7 +158,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
         }}
       >
         <div className="flex items-center gap-10">
-          <img src="/crada-logo.png" alt="Crada" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
+          <img src="/crada-logo.png" alt="Crada" style={{ height: '56px', width: 'auto', objectFit: 'contain' }} />
           <nav className="hidden md:flex items-center gap-8">
             {['Markets', 'Signals', 'Terminal', 'Docs'].map(item => (
               <button
@@ -333,8 +334,8 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
           { name: 'Phantom',   svg: '/logos/phantom.svg',  invert: true },
           { name: 'Solflare',  svg: '/logos/solflare.svg', invert: true },
           { name: 'DFlow',     icon: '/logos/dflow.svg' },
-          { name: 'SNS' },
-          { name: 'AllDomains' },
+          { name: 'SNS', icon: '/logos/sns.svg' },
+          { name: 'AllDomains', svg: '/logos/alldomains.svg' },
           { name: 'Solana',    svg: '/logos/solana.svg' },
         ];
         const all = [...partners, ...partners];
@@ -931,7 +932,7 @@ function Dashboard() {
         style={{ background: 'rgba(5,5,5,0.90)', backdropFilter: 'blur(24px)', borderBottomColor: 'rgba(255,255,255,0.10)', zIndex: 50 }}
       >
         <div className="flex items-center gap-6">
-          <img src="/crada-logo.png" alt="Crada" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
+          <img src="/crada-logo.png" alt="Crada" style={{ height: '56px', width: 'auto', objectFit: 'contain' }} />
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}>
@@ -1315,18 +1316,21 @@ function Dashboard() {
             <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
               {/* Merge Polymarket + Kalshi trending, sort by 24h volume */}
               {[
-                ...trendingMarkets.map(m => ({ type: 'poly' as const, id: m.id, question: m.question, pct: Math.round(m.probability * 100), vol24h: m.volume24h ?? 0, image: m.image, priceChange: m.priceChange ?? null, href: '/market/' + m.id })),
-                ...trendingKalshi.map(m => ({ type: 'kalshi' as const, id: m.id, question: m.question, pct: m.yesPct ?? 50, vol24h: m.volume24h, image: m.image, priceChange: null, href: '/kalshi/' + m.id })),
+                ...trendingMarkets.map(m => ({ type: 'poly' as const, id: m.id, question: m.question, pct: Math.round(m.probability * 100), vol24h: m.volume24h ?? 0, image: m.image, priceChange: m.priceChange ?? null, href: '/market/' + m.id, external: false })),
+                ...trendingKalshi.map(m => ({ type: 'kalshi' as const, id: m.id, question: m.question, pct: m.yesPct ?? 50, vol24h: m.volume24h, image: m.image, priceChange: null, href: '/kalshi/' + m.id, external: false })),
               ]
                 .sort((a, b) => b.vol24h - a.vol24h)
                 .map(item => {
                   const volStr = item.vol24h >= 1_000_000 ? `$${(item.vol24h / 1_000_000).toFixed(1)}M` : item.vol24h >= 1_000 ? `$${(item.vol24h / 1_000).toFixed(0)}K` : `$${item.vol24h}`;
                   return (
-                    <div
+                    <a
                       key={item.type + item.id}
-                      onClick={() => router.push(item.href)}
+                      href={item.external ? item.href : undefined}
+                      target={item.external ? '_blank' : undefined}
+                      rel={item.external ? 'noreferrer' : undefined}
+                      onClick={!item.external ? (e) => { e.preventDefault(); router.push(item.href); } : undefined}
                       className="cursor-pointer flex-shrink-0 rounded-2xl overflow-hidden flex flex-col transition-all"
-                      style={{ width: '220px', background: 'rgba(20,20,28,0.95)', border: '1px solid rgba(124,58,237,0.18)' }}
+                      style={{ width: '220px', background: 'rgba(20,20,28,0.95)', border: '1px solid rgba(124,58,237,0.18)', textDecoration: 'none' }}
                       onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)')}
                       onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.18)')}
                     >
@@ -1365,7 +1369,7 @@ function Dashboard() {
                           <div className="h-full rounded-full" style={{ width: `${item.pct}%`, background: item.pct >= 50 ? '#4ade80' : '#f87171' }} />
                         </div>
                       </div>
-                    </div>
+                    </a>
                   );
                 })}
             </div>
@@ -1432,6 +1436,7 @@ function Dashboard() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                   {filteredPolymarket.slice(0, visiblePolymarket).map(market => {
+                    const isMulti = market.outcomes && market.outcomes.length > 2;
                     const yesPct = Math.round(market.probability * 100);
                     const v = market.volume24h ?? market.volume;
                     const volStr = v >= 1_000_000
@@ -1440,11 +1445,12 @@ function Dashboard() {
                       ? `$${(v / 1_000).toFixed(0)}K`
                       : `$${v}`;
                     return (
-                      <div
+                      <a
                         key={market.id}
-                        onClick={() => router.push('/market/' + market.id)}
+                        href={undefined}
+                        onClick={(e) => { e.preventDefault(); router.push('/market/' + market.id); }}
                         className="group cursor-pointer flex flex-col rounded-2xl overflow-hidden transition-all"
-                        style={{ background: 'rgba(20,20,28,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        style={{ background: 'rgba(20,20,28,0.9)', border: '1px solid rgba(255,255,255,0.08)', textDecoration: 'none' }}
                         onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)')}
                         onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
                       >
@@ -1463,9 +1469,16 @@ function Dashboard() {
                             </div>
                           )}
                           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(14,14,20,0.85) 0%, transparent 60%)' }} />
-                          <span className="absolute bottom-2 left-3 text-[9px] font-semibold capitalize px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            {market.category}
-                          </span>
+                          <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
+                            <span className="text-[9px] font-semibold capitalize px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                              {market.category}
+                            </span>
+                            {isMulti && (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(124,58,237,0.4)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.4)' }}>
+                                {market.outcomes!.length} outcomes
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="p-3 flex-1 flex flex-col gap-3">
@@ -1474,31 +1487,58 @@ function Dashboard() {
                             {market.question}
                           </p>
 
-                          {/* YES / NO price panels */}
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <a
-                              href={market.tradeUrl || 'https://polymarket.com'}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              className="rounded-xl p-2.5 text-center transition-all hover:brightness-110"
-                              style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.20)' }}
-                            >
-                              <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(74,222,128,0.6)' }}>Yes</p>
-                              <p className="text-base font-bold font-mono" style={{ color: '#4ade80' }}>{yesPct}¢</p>
-                            </a>
-                            <a
-                              href={market.tradeUrl || 'https://polymarket.com'}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              className="rounded-xl p-2.5 text-center transition-all hover:brightness-110"
-                              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}
-                            >
-                              <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(248,113,113,0.6)' }}>No</p>
-                              <p className="text-base font-bold font-mono" style={{ color: '#f87171' }}>{100 - yesPct}¢</p>
-                            </a>
-                          </div>
+                          {isMulti ? (
+                            /* Multi-outcome: ranked list of top outcomes */
+                            <div className="flex flex-col gap-1.5">
+                              {market.outcomes!.slice(0, 4).map((o, i) => {
+                                const pct = Math.round(o.probability * 100);
+                                const colors = ['#a78bfa', '#60a5fa', '#34d399', '#fb923c'];
+                                const bgColors = ['rgba(167,139,250,0.12)', 'rgba(96,165,250,0.10)', 'rgba(52,211,153,0.10)', 'rgba(251,146,60,0.10)'];
+                                return (
+                                  <div key={i} className="flex items-center gap-2">
+                                    <div className="flex-1 relative rounded-md overflow-hidden" style={{ height: 22, background: 'rgba(255,255,255,0.04)' }}>
+                                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: bgColors[i], transition: 'width 0.6s ease' }} />
+                                      <span className="absolute inset-0 flex items-center px-2 text-[10px] font-medium truncate" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                                        {o.name}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] font-bold font-mono w-8 text-right" style={{ color: colors[i] }}>{pct}%</span>
+                                  </div>
+                                );
+                              })}
+                              {market.outcomes!.length > 4 && (
+                                <p className="text-[9px] text-right" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                                  +{market.outcomes!.length - 4} more
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            /* Binary: YES / NO panels */
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <a
+                                href={market.tradeUrl || 'https://polymarket.com'}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="rounded-xl p-2.5 text-center transition-all hover:brightness-110"
+                                style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.20)' }}
+                              >
+                                <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(74,222,128,0.6)' }}>Yes</p>
+                                <p className="text-base font-bold font-mono" style={{ color: '#4ade80' }}>{yesPct}¢</p>
+                              </a>
+                              <a
+                                href={market.tradeUrl || 'https://polymarket.com'}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="rounded-xl p-2.5 text-center transition-all hover:brightness-110"
+                                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}
+                              >
+                                <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(248,113,113,0.6)' }}>No</p>
+                                <p className="text-base font-bold font-mono" style={{ color: '#f87171' }}>{100 - yesPct}¢</p>
+                              </a>
+                            </div>
+                          )}
 
                           {/* Footer */}
                           <div className="flex items-center justify-between text-[10px] pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)' }}>
@@ -1510,7 +1550,7 @@ function Dashboard() {
                             )}
                           </div>
                         </div>
-                      </div>
+                      </a>
                     );
                   })}
                 </div>

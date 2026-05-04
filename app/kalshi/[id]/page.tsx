@@ -308,7 +308,7 @@ export default function KalshiMarketPage() {
       >
         <div className="flex items-center gap-6">
           <button onClick={() => router.push('/')}>
-            <img src="/crada-logo.png" alt="Crada" style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
+            <img src="/crada-logo.png" alt="Crada" style={{ height: '56px', width: 'auto', objectFit: 'contain' }} />
           </button>
           <button
             onClick={() => router.push('/')}
