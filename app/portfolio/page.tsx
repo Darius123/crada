@@ -9,17 +9,6 @@ import { Space_Grotesk, Inter } from 'next/font/google';
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'] });
 const inter = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
 
-const MOCK_POSITIONS = [
-  { id: 1, question: 'Will BTC reach $100k before May 2024?', side: 'YES', stake: 45.00, pnl: +12.40, contracts: 12.50, probability: 64 },
-  { id: 2, question: 'Fed Rate Cut in June?', side: 'NO', stake: 20.00, pnl: -3.15, contracts: 8.20, probability: 38 },
-  { id: 3, question: 'SOL ATH in 2026?', side: 'YES', stake: 10.00, pnl: +5.80, contracts: 5.00, probability: 71 },
-];
-
-const MOCK_ACTIVITY = [
-  { id: 1, type: 'buy', label: 'Bought YES · Tech Layoffs 2026', time: '2 hours ago', amount: -10.00, status: 'CONFIRMED', txUrl: '#' },
-  { id: 2, type: 'deposit', label: 'Funds Added · Phantom', time: '5 hours ago', amount: +50.00, status: 'CONFIRMED', txUrl: '#' },
-  { id: 3, type: 'sell', label: 'Sold NO · ETH $5k Q1', time: '1 day ago', amount: +24.50, status: 'CONFIRMED', txUrl: '#' },
-];
 
 function CopyIcon() {
   return (
@@ -50,9 +39,8 @@ export default function PortfolioPage() {
   const isEmbedded = walletName.toLowerCase().includes('privy') || walletName.toLowerCase().includes('embedded');
   const walletLabel = isEmbedded ? 'Embedded Wallet' : (walletName || 'Wallet');
 
-  const totalBalance = 124.50;
-  const solBalance = 0.42;
-  const totalPnl = MOCK_POSITIONS.reduce((s, p) => s + p.pnl, 0);
+  const positions: never[] = [];
+  const activity: never[] = [];
 
   const handleCopy = () => {
     if (address) { navigator.clipboard.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 1500); }
@@ -161,10 +149,10 @@ export default function PortfolioPage() {
           <div className="mb-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Available Liquidity</p>
             <p className="text-4xl sm:text-5xl font-bold text-white" style={{ letterSpacing: '-0.02em' }}>
-              ${totalBalance.toFixed(2)}
+              {address ? '—' : '$0.00'}
             </p>
             <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              USDC · Solana &nbsp;·&nbsp; {solBalance} SOL
+              USDC · Solana
             </p>
           </div>
 
@@ -238,7 +226,7 @@ export default function PortfolioPage() {
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-bold text-white">Open Positions</h2>
               <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)', color: '#c4b5fd' }}>
-                {MOCK_POSITIONS.length} Active
+                {positions.length} Active
               </span>
             </div>
             <button onClick={() => router.push('/')} className="text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -246,96 +234,47 @@ export default function PortfolioPage() {
             </button>
           </div>
 
-          <div className="divide-y" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
-            {MOCK_POSITIONS.map(pos => (
-              <div key={pos.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className="text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0"
-                    style={pos.side === 'YES'
-                      ? { background: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }
-                      : { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
-                    }
-                  >
-                    {pos.side}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{pos.question}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      {pos.contracts} contracts · {pos.probability}% odds
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold" style={{ color: pos.pnl >= 0 ? '#4ade80' : '#f87171' }}>
-                    {pos.pnl >= 0 ? '+' : ''}${pos.pnl.toFixed(2)}
-                  </p>
-                  <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    Stake ${pos.stake.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Total P&L footer */}
-          <div
-            className="flex items-center justify-between px-5 py-3"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Total Unrealized P&L</span>
-            <span className="text-sm font-bold font-mono" style={{ color: totalPnl >= 0 ? '#4ade80' : '#f87171' }}>
-              {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
-            </span>
-          </div>
+          {positions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'rgba(255,255,255,0.12)' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>No open positions yet</p>
+              <button
+                onClick={() => router.push('/')}
+                className="text-xs font-bold px-4 py-2 rounded-lg transition-all hover:brightness-110"
+                style={{ background: 'rgba(124,58,237,0.2)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }}
+              >
+                Browse Markets →
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Recent Activity */}
         <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <h2 className="text-sm font-bold text-white">Recent Activity</h2>
-            <button className="text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <button
+              onClick={() => router.push('/coming-soon')}
+              className="text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-white"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+            >
               View All
             </button>
           </div>
 
-          <div className="divide-y" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
-            {MOCK_ACTIVITY.map(tx => (
-              <div key={tx.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: tx.amount > 0 ? 'rgba(34,197,94,0.10)' : 'rgba(124,58,237,0.10)' }}
-                  >
-                    {tx.type === 'buy' && (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#c4b5fd' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                    )}
-                    {tx.type === 'deposit' && (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#4ade80' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    )}
-                    {tx.type === 'sell' && (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#4ade80' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{tx.label}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{tx.time}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="text-right">
-                    <p className="text-sm font-bold font-mono" style={{ color: tx.amount > 0 ? '#4ade80' : 'rgba(255,255,255,0.7)' }}>
-                      {tx.amount > 0 ? '+' : ''}${Math.abs(tx.amount).toFixed(2)}
-                    </p>
-                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{tx.status}</p>
-                  </div>
-                  <a href={tx.txUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-white" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                    <ExternalIcon />
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
+          {activity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'rgba(255,255,255,0.12)' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>No recent activity</p>
+              <p className={`${inter.className} text-[11px] text-center px-6`} style={{ color: 'rgba(255,255,255,0.2)' }}>
+                Your trades and transactions will appear here
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* Crada signal footer nudge */}

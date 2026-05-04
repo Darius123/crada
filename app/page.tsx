@@ -1108,13 +1108,26 @@ function Dashboard() {
               {/* ── Network Status Visual — col-span-4 ── */}
               <section className="col-span-12 lg:col-span-4">
                 <div className="glass-card rounded-2xl overflow-hidden h-full relative" style={{ minHeight: '280px' }}>
-                  <img
-                    src="https://lh3.googleusercontent.com/aida/ADBb0uj5SDWj6k1XWBz6oP_sqQF4fel7I3xKIQmSp0P6rvYBnMF73ZxuA4RGJIVckWOxfWPQWZstgFzMnP93UhizFKbIIjWn6yTnVFk1GZ_h4SHny5TaZw1vZ_2HxQ3ynQ5_z8et8mQ22462Ywz1Uopmbys8uEdbhCo231s1JAPtwlY5qHye7PQMjpC-W8L2l3OqKypD354sTPrnRDecREQGRgLtZ55cJVcMJapbpBdbXCCWvRMLR_MwXZP4tks4MUm1k6-LFuhYrwt8"
-                    alt="Market Density Map"
-                    className="w-full h-full object-cover absolute inset-0"
-                    style={{ opacity: 0.6, mixBlendMode: 'screen' }}
-                  />
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, black 0%, transparent 60%)' }} />
+                  {/* Inline market density heatmap — no external image dependency */}
+                  <svg viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full" style={{ opacity: 0.55 }}>
+                    <rect x="0"   y="0"   width="160" height="140" rx="4" fill="#7c3aed" opacity="0.70" />
+                    <rect x="164" y="0"   width="110" height="85"  rx="4" fill="#4de082" opacity="0.55" />
+                    <rect x="278" y="0"   width="122" height="85"  rx="4" fill="#60a5fa" opacity="0.50" />
+                    <rect x="164" y="89"  width="110" height="51"  rx="4" fill="#a78bfa" opacity="0.60" />
+                    <rect x="278" y="89"  width="60"  height="51"  rx="4" fill="#fb923c" opacity="0.50" />
+                    <rect x="342" y="89"  width="58"  height="51"  rx="4" fill="#f472b6" opacity="0.45" />
+                    <rect x="0"   y="144" width="80"  height="68"  rx="4" fill="#34d399" opacity="0.55" />
+                    <rect x="84"  y="144" width="76"  height="68"  rx="4" fill="#7c3aed" opacity="0.45" />
+                    <rect x="164" y="144" width="60"  height="68"  rx="4" fill="#facc15" opacity="0.40" />
+                    <rect x="228" y="144" width="172" height="68"  rx="4" fill="#60a5fa" opacity="0.35" />
+                    <rect x="0"   y="216" width="200" height="64"  rx="4" fill="#a78bfa" opacity="0.40" />
+                    <rect x="204" y="216" width="96"  height="64"  rx="4" fill="#4de082" opacity="0.35" />
+                    <rect x="304" y="216" width="96"  height="64"  rx="4" fill="#f87171" opacity="0.38" />
+                  </svg>
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,5,5,0.95) 0%, rgba(5,5,5,0.3) 50%, transparent 100%)' }} />
+                  <div className="absolute top-4 left-4 right-4">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.35)' }}>Market Density Map</p>
+                  </div>
                   <div className="absolute bottom-6 left-6">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>NETWORK STATUS</p>
                     <p className="text-lg font-bold" style={{ color: '#4de082' }}>Solana Mainnet: 2,492 TPS</p>
