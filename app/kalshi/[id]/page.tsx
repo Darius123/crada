@@ -11,7 +11,8 @@ import { Space_Grotesk, Inter } from 'next/font/google';
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'] });
 const inter = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
 
-const DFLOW_PROXY = 'https://api.eitherway.ai/api/dflow';
+const DFLOW_QUOTE = '/api/dflow/quote';
+const DFLOW_STATUS = 'https://quote-api.dflow.net/order-status';
 const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
 const STATUS_MSGS: Record<string, string> = {
@@ -28,7 +29,7 @@ async function pollOrderStatus(signature: string, maxTries = 60): Promise<string
   for (let i = 0; i < maxTries; i++) {
     await new Promise(r => setTimeout(r, 3000));
     try {
-      const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order-status?signature=${signature}`);
+      const res = await fetch(`${DFLOW_QUOTE}?endpoint=order-status&signature=${signature}`);
       if (!res.ok) continue;
       const data = await res.json();
       if (['closed', 'expired', 'failed', 'pendingClose'].includes(data.status)) return data.status;
@@ -169,7 +170,7 @@ export default function KalshiMarketPage() {
   const [newsFetched, setNewsFetched] = useState(false);
 
   // On-chain trade state
-  const [quote, setQuote] = useState<{ outAmount?: number } | null>(null);
+  const [quote, setQuote] = useState<{ outAmount?: number; estimated?: boolean } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
@@ -213,23 +214,26 @@ export default function KalshiMarketPage() {
     try {
       const amtScaled = Math.round(amt * 1_000_000).toString();
       const params = new URLSearchParams({ inputMint: USDC_MINT, outputMint, amount: amtScaled, slippageBps: 'auto', prioritizationFeeLamports: 'auto', predictionMarketSlippageBps: '100' });
-      const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order?${params}`);
+      const res = await fetch(`${DFLOW_QUOTE}?${params}`);
       if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        let msg = `HTTP ${res.status}`;
-        try {
-          const body = JSON.parse(text);
-          msg = body?.error || body?.message || body?.detail || msg;
-        } catch { if (text) msg = text; }
-        if (res.status === 400) msg = 'Amount unavailable — try a smaller size or switch sides';
-        throw new Error(msg);
+        // Quote API unavailable — fall back to local price estimate
+        const price = tradeTab === 'yes' ? (market?.yesAsk ?? 0.5) : (market?.noAsk ?? 0.5);
+        if (price > 0) {
+          setQuote({ outAmount: Math.round((amt / price) * 1_000_000), estimated: true });
+        } else {
+          setQuote(null);
+        }
+        setQuoteError(null);
+        return;
       }
       setQuote(await res.json());
-    } catch (err) {
-      setQuoteError(err instanceof Error ? err.message : String(err));
-      setQuote(null);
+    } catch {
+      // Network error — use local estimate silently
+      const price = tradeTab === 'yes' ? (market?.yesAsk ?? 0.5) : (market?.noAsk ?? 0.5);
+      if (price > 0) setQuote({ outAmount: Math.round((parseFloat(amount) / price) * 1_000_000), estimated: true });
+      setQuoteError(null);
     } finally { setQuoteLoading(false); }
-  }, [amount, outputMint]);
+  }, [amount, outputMint, tradeTab, market]);
 
   useEffect(() => {
     const t = setTimeout(fetchQuote, 500);
@@ -244,7 +248,7 @@ export default function KalshiMarketPage() {
     try {
       const amtScaled = Math.round(amt * 1_000_000).toString();
       const params = new URLSearchParams({ inputMint: USDC_MINT, outputMint, amount: amtScaled, userPublicKey: publicKey.toBase58(), slippageBps: 'auto', prioritizationFeeLamports: 'auto', predictionMarketSlippageBps: '100' });
-      const res = await fetch(`${DFLOW_PROXY}/e.quote-api.dflow.net/order?${params}`);
+      const res = await fetch(`${DFLOW_QUOTE}?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const orderData = await res.json();
       if (!orderData.transaction) throw new Error('No transaction returned');

@@ -8,6 +8,10 @@ const geist = Geist({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Crada — Prediction Market Intelligence',
   description: 'The edge serious traders don\'t talk about. Prediction markets, made easy. Built on Solana.',
+  icons: {
+    icon: '/crada-icon.png',
+    apple: '/crada-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

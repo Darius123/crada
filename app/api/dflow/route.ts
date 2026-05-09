@@ -12,19 +12,12 @@ function detectCategory(title: string): string {
   return 'general';
 }
 
-async function fetchEventImages(): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  try {
-    const res = await fetch(`${DFLOW_BASE}/events?limit=200`, {
-      headers: HEADERS,
-      next: { revalidate: 3600 },
-    });
-    const data = await res.json();
-    for (const e of data.events ?? []) {
-      if (e.ticker && e.imageUrl) map.set(e.ticker, e.imageUrl);
-    }
-  } catch {}
-  return map;
+// Kalshi series images live at a predictable S3 path.
+// The series prefix is the first dash-separated segment of the event ticker.
+// e.g. "KXNBA-26" → "KXNBA", "KXPGATOUR-MAST26" → "KXPGATOUR"
+function seriesImage(eventTicker: string): string {
+  const series = eventTicker.split('-')[0];
+  return `https://kalshi-public-docs.s3.amazonaws.com/series-images-webp/${series}.webp`;
 }
 
 async function fetchActiveMarkets(): Promise<any[]> {
@@ -45,10 +38,7 @@ async function fetchActiveMarkets(): Promise<any[]> {
 
 export async function GET() {
   try {
-    const [imageMap, raw] = await Promise.all([
-      fetchEventImages(),
-      fetchActiveMarkets(),
-    ]);
+    const raw = await fetchActiveMarkets();
 
     const seen = new Set<string>();
     const markets = raw
@@ -65,7 +55,7 @@ export async function GET() {
       })
       .map((m: any) => {
         const category = detectCategory(m.title);
-        const image = imageMap.get(m.eventTicker) ?? null;
+        const image = m.eventTicker ? seriesImage(m.eventTicker) : null;
         const volume24h = m.volume24hFp ? parseFloat(m.volume24hFp) : 0;
         return {
           id: m.ticker,

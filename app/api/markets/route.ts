@@ -9,7 +9,7 @@ function detectCategory(q: string, tags: string): string {
   return 'general';
 }
 
-async function fetchMultiOutcomeEvents(): Promise<any[]> {
+async function fetchMultiOutcomeEvents(now: Date): Promise<any[]> {
   const pages = await Promise.all(
     [0, 100].map(offset =>
       fetch(
@@ -42,6 +42,10 @@ async function fetchMultiOutcomeEvents(): Promise<any[]> {
       } catch { /* skip bad markets */ }
     }
 
+    // Drop events whose resolution date has already passed
+    if (event.endDate) {
+      try { if (new Date(event.endDate) < now) continue; } catch {}
+    }
     // Only include genuine multi-outcome events (probabilities sum to ~1)
     if (total < 0.7 || total > 1.4) continue;
     seen.add(event.id);
@@ -72,6 +76,7 @@ async function fetchMultiOutcomeEvents(): Promise<any[]> {
 
 export async function GET() {
   try {
+    const now = new Date();
     const [binaryPages, multiOutcome] = await Promise.all([
       Promise.all(
         [0, 100, 200].map(offset =>
@@ -84,9 +89,8 @@ export async function GET() {
             .catch(() => [] as any[])
         )
       ),
-      fetchMultiOutcomeEvents(),
+      fetchMultiOutcomeEvents(now),
     ]);
-
     const raw: any[] = binaryPages.flat();
     const seen = new Set<string>();
 
@@ -94,6 +98,10 @@ export async function GET() {
       .filter((m: any) => {
         if (seen.has(m.id) || !m.question) return false;
         seen.add(m.id);
+        // Drop markets whose resolution date has already passed
+        if (m.endDateIso) {
+          try { if (new Date(m.endDateIso) < now) return false; } catch {}
+        }
         let prob = 0.5;
         try { prob = parseFloat(JSON.parse(m.outcomePrices || '["0.5"]')[0]); } catch {}
         if (prob < 0.04 || prob > 0.96) return false;

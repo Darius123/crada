@@ -6,27 +6,18 @@ const DFLOW_BASE = 'https://prediction-markets-api-proxy.dflow.workers.dev/api/v
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const [marketRes, eventRes] = await Promise.all([
-      fetch(`${DFLOW_BASE}/market/${id}`, {
-        headers: { Origin: 'https://dflow.net', Referer: 'https://dflow.net/' },
-        next: { revalidate: 30 },
-      }),
-      fetch(`${DFLOW_BASE}/events`, {
-        headers: { Origin: 'https://dflow.net', Referer: 'https://dflow.net/' },
-        next: { revalidate: 3600 },
-      }),
-    ]);
+    const marketRes = await fetch(`${DFLOW_BASE}/market/${id}`, {
+      headers: { Origin: 'https://dflow.net', Referer: 'https://dflow.net/' },
+      next: { revalidate: 30 },
+    });
 
     if (!marketRes.ok) throw new Error(`DFlow returned ${marketRes.status}`);
     const m = await marketRes.json();
 
-    // Build image map from events
-    let image: string | null = null;
-    try {
-      const eventsData = await eventRes.json();
-      const event = (eventsData.events ?? []).find((e: any) => e.ticker === m.eventTicker);
-      image = event?.imageUrl ?? null;
-    } catch {}
+    // Derive image directly from the Kalshi series S3 path — no extra API call needed
+    const image = m.eventTicker
+      ? `https://kalshi-public-docs.s3.amazonaws.com/series-images-webp/${m.eventTicker.split('-')[0]}.webp`
+      : null;
 
     return NextResponse.json({
       id: m.ticker,
