@@ -725,7 +725,7 @@ function Dashboard() {
     setSwapQuote(null);
     setSwapError(null);
     let live = true;
-    fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${swapFromSol ? SOL_MINT : USDC_MINT}&outputMint=${swapFromSol ? USDC_MINT : SOL_MINT}&amount=${raw}&slippageBps=50`)
+    fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${swapFromSol ? SOL_MINT : USDC_MINT}&outputMint=${swapFromSol ? USDC_MINT : SOL_MINT}&amount=${raw}&slippageBps=50`, { headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_JUPITER_API_KEY}` } })
       .then(r => r.json())
       .then(d => {
         if (!live) return;
@@ -750,7 +750,7 @@ function Dashboard() {
     try {
       const res = await fetch('https://api.jup.ag/swap/v1/swap', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_JUPITER_API_KEY}` },
         body: JSON.stringify({ quoteResponse: swapQuote, userPublicKey: address, wrapAndUnwrapSol: true }),
       });
       const { swapTransaction, error } = await res.json();

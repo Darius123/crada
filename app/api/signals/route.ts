@@ -8,7 +8,7 @@ async function fetchJupiterSolPrice(): Promise<number | null> {
   try {
     const res = await fetch(
       'https://api.jup.ag/swap/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&slippageBps=50',
-      { cache: 'no-store' }
+      { cache: 'no-store', headers: { 'Authorization': `Bearer ${process.env.JUPITER_API_KEY}` } }
     );
     if (!res.ok) return null;
     const data = await res.json();
