@@ -2,61 +2,46 @@
 
 **Project:** Crada — Prediction Market Intelligence  
 **Live URL:** https://crada.fun  
-**Developer Email:** dariusomejiaku@gmail.com  
-**Hackathon:** Colosseum Frontier 2026
+**Developer Email:** dariusomejiaku@gmail.com
 
 ---
 
-## What We Built
+## What Crada does
 
-Crada is a prediction market intelligence platform that aggregates 500+ live markets from Polymarket and Kalshi, surfaces whale and insider wallet signals, and allows users to trade directly in-app. Jupiter powers the core execution and price intelligence layer.
+Crada is a prediction market terminal. It pulls live markets from Polymarket and Kalshi into one feed, shows you what whales and insiders are betting on-chain before everyone else notices, and lets you trade without leaving the app.
+
+Jupiter is how the money moves.
 
 ---
 
-## How We Use Jupiter
+## How we use Jupiter
 
-### 1. SOL ↔ USDC Swap (Swap API v1)
+### Swapping into positions
 
-Users can swap SOL to USDC directly within Crada to fund their prediction market positions — no need to leave the app or go to an external DEX.
+The core problem we kept running into: users land on a market they want to trade, but their funds are in SOL and the market needs USDC. We didn't want to send them to a DEX — that's the kind of friction that kills conversion.
 
-**Endpoint:** `POST https://api.jup.ag/swap/v1/swap`  
-**File:** `app/page.tsx`
-
-```typescript
-const res = await fetch('https://api.jup.ag/swap/v1/swap', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_JUPITER_API_KEY}`
-  },
-  body: JSON.stringify({
-    quoteResponse: swapQuote,
-    userPublicKey: address,
-    wrapAndUnwrapSol: true
-  }),
-});
-```
-
-### 2. Swap Quote (Quote API)
-
-Before executing a swap, Crada fetches a live quote from Jupiter to show users the exact output amount and route.
-
-**Endpoint:** `GET https://api.jup.ag/swap/v1/quote`  
-**File:** `app/page.tsx`
+So we built the swap directly into Crada's terminal. You enter an amount in SOL, we hit Jupiter's Quote API to show you exactly what you're getting, you confirm, and the swap executes in-app before the trade goes through.
 
 ```typescript
+// Quote
 fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${SOL_MINT}&outputMint=${USDC_MINT}&amount=${raw}&slippageBps=50`, {
   headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_JUPITER_API_KEY}` }
 })
+
+// Execute
+fetch('https://api.jup.ag/swap/v1/swap', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_JUPITER_API_KEY}` },
+  body: JSON.stringify({ quoteResponse: swapQuote, userPublicKey: address, wrapAndUnwrapSol: true }),
+})
 ```
 
-### 3. SOL Price for Signal Intelligence
+### SOL price for whale signal calculations
 
-Crada's signals engine uses Jupiter's quote API as a real-time SOL price oracle to calculate USD values for on-chain whale positions and insider wallet activity.
-
-**File:** `app/api/signals/route.ts`
+Our signals engine tracks large wallet movements and flags suspicious activity. To display those positions in USD (so it's actually readable), we needed a reliable real-time SOL price. We use Jupiter's quote API for this — 1 SOL → USDC quote gives us the price directly from live market conditions, no third-party oracle.
 
 ```typescript
+// app/api/signals/route.ts
 const res = await fetch(
   'https://api.jup.ag/swap/v1/quote?inputMint=So111...&outputMint=EPjF...&amount=1000000000&slippageBps=50',
   { headers: { 'Authorization': `Bearer ${process.env.JUPITER_API_KEY}` } }
@@ -66,21 +51,18 @@ const solPrice = parseInt(data.outAmount) / 1e6;
 
 ---
 
-## Developer Experience Feedback
+## Honest dev feedback
 
-**What worked well:**
-- The Quote API is fast and reliable — we use it as a price oracle without issues
-- Clean JSON responses, minimal setup required
-- No authentication friction for getting started
+The Quote API is solid — fast, consistent, never had it go down on us during testing. The swap flow was straightforward to integrate.
 
-**What could be improved:**
-- Clearer documentation on which endpoints require the API key vs. which work without it
-- A dedicated Price API endpoint (separate from the Swap Quote) would be cleaner for price oracle use cases
+One thing that tripped me up early: I wasn't sure which endpoints needed the API key and which worked without it. Took some trial and error. Clearer docs on auth requirements per endpoint would've saved time.
+
+Also — using the swap quote as a price oracle works but feels like a workaround. A clean dedicated price endpoint would be cleaner for this use case.
 
 ---
 
-## What's Next
+## What's next with Jupiter
 
-- Integrate Jupiter Limit Orders so users can set price targets for prediction market position funding
-- Add Jupiter DCA for automated recurring deposits into prediction market bankrolls
-- Replace CoinGecko price ticker with Jupiter Price API for a fully Solana-native stack
+- Limit orders so users can set a price to auto-convert SOL → USDC when funding a market position
+- DCA for users who want to drip funds into their prediction market bankroll over time
+- Swap the CoinGecko price ticker for Jupiter's Price API — want the whole stack Solana-native
