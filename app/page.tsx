@@ -166,7 +166,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
             <svg className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.3)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Search signals...</span>
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Search markets...</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}>⌘K</span>
           </div>
           <button className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
@@ -512,11 +512,20 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
               </a>
               <a
                 href="#"
-                className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
+                className="w-12 h-12 rounded-full flex items-center justify-center transition-all hover:border-[#7C3AED]"
                 style={{ border: '1px solid rgba(255,255,255,0.05)' }}
               >
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </a>
+              <a
+                href="mailto:hello@crada.fun"
+                className="w-12 h-12 rounded-full flex items-center justify-center transition-all hover:border-[#7C3AED]"
+                style={{ border: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </a>
             </div>
@@ -545,6 +554,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
               ))}
             </ul>
           </div>
+
 
           {/* Newsletter */}
           <div className="col-span-12 md:col-span-3">
@@ -617,6 +627,7 @@ function Dashboard() {
     return 'Markets';
   });
   const [copied, setCopied] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [solanaId, setSolanaId] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
@@ -874,6 +885,14 @@ function Dashboard() {
       ),
     },
     {
+      label: 'Leaderboard',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
       label: 'Portfolio',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -906,7 +925,7 @@ function Dashboard() {
             </svg>
             <input
               type="text"
-              placeholder="Search signals..."
+              placeholder="Search markets..."
               value={search}
               onChange={e => { setSearch(e.target.value); setVisiblePolymarket(ITEMS_PER_PAGE); setVisibleKalshi(ITEMS_PER_PAGE); }}
               className="bg-transparent text-sm focus:outline-none w-40"
@@ -962,6 +981,7 @@ function Dashboard() {
                 onClick={() => {
                   setActiveSideNav(label);
                   if (label === 'Signals') router.push('/signals');
+                  if (label === 'Leaderboard') router.push('/leaderboard');
                 }}
                 className="w-full flex items-center gap-3 px-6 py-3 text-left transition-all"
                 style={{
@@ -984,7 +1004,7 @@ function Dashboard() {
         {/* Upgrade */}
         <div className="p-6">
           <button
-            onClick={() => router.push('/coming-soon')}
+            onClick={() => router.push('/pricing')}
             className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-[#7C3AED] hover:text-white"
             style={{ border: '1px solid rgba(124,58,237,0.40)', color: '#c4b5fd' }}
           >
@@ -1766,15 +1786,43 @@ function Dashboard() {
         </div>
       )}
 
+      {/* Mobile search bar */}
+      {mobileSearchOpen && (
+        <div className="md:hidden fixed top-16 left-0 right-0 z-40 px-4 pt-3 pb-2" style={{ background: 'rgba(5,5,5,0.95)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search markets..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setVisiblePolymarket(ITEMS_PER_PAGE); setVisibleKalshi(ITEMS_PER_PAGE); }}
+              className="bg-transparent text-sm focus:outline-none flex-1 text-white"
+              style={{ color: 'rgba(255,255,255,0.9)' }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Mobile bottom nav */}
       <nav
         className="md:hidden fixed bottom-6 left-6 right-6 z-50 flex justify-around items-center py-4"
         style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(20px)', borderRadius: '16px' }}
       >
         {[
-          { label: 'Markets',   active: activeSideNav === 'Markets',   onClick: () => setActiveSideNav('Markets'),           icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-          { label: 'Signals',   active: false,                          onClick: () => router.push('/signals'),                icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
-          { label: 'Portfolio', active: activeSideNav === 'Portfolio',  onClick: () => setActiveSideNav('Portfolio'),          icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
+          { label: 'Markets',   active: activeSideNav === 'Markets' && !mobileSearchOpen,   onClick: () => { setActiveSideNav('Markets'); setMobileSearchOpen(false); },  icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+          { label: 'Search',    active: mobileSearchOpen,                                    onClick: () => setMobileSearchOpen(v => !v),                                   icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+          { label: 'Signals',   active: false,                                               onClick: () => router.push('/signals'),                                        icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+          { label: 'Portfolio', active: activeSideNav === 'Portfolio' && !mobileSearchOpen,  onClick: () => { setActiveSideNav('Portfolio'); setMobileSearchOpen(false); }, icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
         ].map(({ label, active, onClick, icon }) => (
           <button
             key={label}

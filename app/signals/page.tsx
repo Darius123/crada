@@ -58,29 +58,34 @@ export default function SignalsPage() {
   }, [ready, authenticated, router]);
 
   useEffect(() => {
-    fetch('/api/signals')
-      .then(res => res.json())
-      .then(data => {
-        const list = (data.signals || []).map((s: Omit<Signal, 'minsAgo'>) => ({
-          ...s,
-          minsAgo: Math.floor(Math.random() * 55) + 1,
-        }));
-        setSignals(list);
-        if (data.solPrice) setSolPrice(data.solPrice);
-        setLoading(false);
+    const load = () => {
+      fetch('/api/signals')
+        .then(res => res.json())
+        .then(data => {
+          const list = (data.signals || []).map((s: Omit<Signal, 'minsAgo'>) => ({
+            ...s,
+            minsAgo: Math.floor(Math.random() * 55) + 1,
+          }));
+          setSignals(list);
+          if (data.solPrice) setSolPrice(data.solPrice);
+          setLoading(false);
 
-        // Resolve domains for all wallet addresses in insider signals
-        const addresses: string[] = [];
-        list.forEach((s: Signal) => { if (s.topWallets) addresses.push(...s.topWallets); });
-        const unique = [...new Set(addresses)];
-        unique.forEach(addr => {
-          fetch(`/api/domain?address=${addr}`)
-            .then(r => r.json())
-            .then(d => { if (d.domain) setWalletDomains(prev => ({ ...prev, [addr]: d.domain })); })
-            .catch(() => {});
-        });
-      })
-      .catch(() => setLoading(false));
+          const addresses: string[] = [];
+          list.forEach((s: Signal) => { if (s.topWallets) addresses.push(...s.topWallets); });
+          const unique = [...new Set(addresses)];
+          unique.forEach(addr => {
+            fetch(`/api/domain?address=${addr}`)
+              .then(r => r.json())
+              .then(d => { if (d.domain) setWalletDomains(prev => ({ ...prev, [addr]: d.domain })); })
+              .catch(() => {});
+          });
+        })
+        .catch(() => setLoading(false));
+    };
+
+    load();
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   const badgeStyle = (badge: string): React.CSSProperties => {
@@ -116,6 +121,15 @@ export default function SignalsPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Leaderboard',
+      path: '/leaderboard',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
     },
@@ -225,6 +239,7 @@ export default function SignalsPage() {
         </nav>
         <div className="p-6">
           <button
+            onClick={() => router.push('/pricing')}
             className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-[#7C3AED] hover:text-white"
             style={{ border: '1px solid rgba(124,58,237,0.40)', color: '#c4b5fd' }}
           >
@@ -517,6 +532,7 @@ export default function SignalsPage() {
         {[
           { label: 'Markets',   active: false, onClick: () => router.push('/'),             icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
           { label: 'Signals',   active: true,  onClick: () => {},                           icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+          { label: 'Board',     active: false, onClick: () => router.push('/leaderboard'),  icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
           { label: 'Portfolio', active: false, onClick: () => { sessionStorage.setItem('crada_tab', 'Portfolio'); router.push('/'); }, icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
         ].map(({ label, active, onClick, icon }) => (
           <button

@@ -137,13 +137,17 @@ export async function GET() {
 
     const data = await marketsRes.json();
 
-    const baseSignals = data
-      .filter((m: any) => {
-        const volume = parseFloat(m.volumeNum || '0');
-        const liquidity = parseFloat(m.liquidityNum || '0');
-        return volume > 10000 && liquidity > 1000;
-      })
-      .slice(0, 10)
+    const eligible = data.filter((m: any) => {
+      const volume = parseFloat(m.volumeNum || '0');
+      const liquidity = parseFloat(m.liquidityNum || '0');
+      return volume > 10000 && liquidity > 1000;
+    });
+
+    // Randomly sample 10 from the top 50 so the feed rotates each load
+    const pool = eligible.slice(0, 50);
+    const sampled = pool.sort(() => Math.random() - 0.5).slice(0, 10);
+
+    const baseSignals = sampled
       .map((m: any) => {
         let prob = 0.5;
         try {

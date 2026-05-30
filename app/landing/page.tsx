@@ -399,6 +399,11 @@ export default function LandingPage() {
               <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Risk Disclaimer</a></li>
+              <li>
+                <a href="mailto:hello@crada.fun" className="hover:text-white transition-colors">
+                  hello@crada.fun
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -407,6 +412,9 @@ export default function LandingPage() {
           <p className="text-white/20 text-xs font-bold uppercase tracking-widest">
             © 2026 CRADA INTELLIGENCE LABS
           </p>
+          <a href="mailto:hello@crada.fun" className="text-white/30 text-xs hover:text-white transition-colors">
+            hello@crada.fun
+          </a>
           <p className="text-white/40 text-xs italic">&ldquo;Know before the odds move.&rdquo;</p>
         </div>
       </footer>
