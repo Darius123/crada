@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
 
     await setSubscription(userId, {
       plan,
+      planCode,
       customerCode: data.customer?.customer_code ?? '',
       subscriptionCode: data.subscription_code ?? '',
       email,

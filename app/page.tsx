@@ -1822,7 +1822,7 @@ function Dashboard() {
           { label: 'Markets',   active: activeSideNav === 'Markets' && !mobileSearchOpen,   onClick: () => { setActiveSideNav('Markets'); setMobileSearchOpen(false); },  icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
           { label: 'Search',    active: mobileSearchOpen,                                    onClick: () => setMobileSearchOpen(v => !v),                                   icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
           { label: 'Signals',   active: false,                                               onClick: () => router.push('/signals'),                                        icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
-          { label: 'Portfolio', active: activeSideNav === 'Portfolio' && !mobileSearchOpen,  onClick: () => { setActiveSideNav('Portfolio'); setMobileSearchOpen(false); }, icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3' },
+          { label: 'Board',     active: false,                                               onClick: () => router.push('/leaderboard'),                                    icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
         ].map(({ label, active, onClick, icon }) => (
           <button
             key={label}
