@@ -1004,7 +1004,7 @@ function Dashboard() {
         {/* Upgrade */}
         <div className="p-6">
           <button
-            onClick={() => router.push('/pricing')}
+            onClick={() => router.push('/coming-soon')}
             className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-[#7C3AED] hover:text-white"
             style={{ border: '1px solid rgba(124,58,237,0.40)', color: '#c4b5fd' }}
           >
