@@ -9,22 +9,44 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
 
   try {
-    const res = await fetch(`https://gamma-api.polymarket.com/markets/${id}`, {
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) throw new Error();
-    const market = await res.json();
+    const isEvent = id.startsWith('event_');
+    const rawId = isEvent ? id.replace('event_', '') : id;
 
-    const title = market.question ?? 'Crada Market';
-    const description = market.description
-      ? market.description.slice(0, 160)
+    const apiUrl = isEvent
+      ? `https://gamma-api.polymarket.com/events?id=${rawId}`
+      : `https://gamma-api.polymarket.com/markets?id=${rawId}`;
+
+    const res = await fetch(apiUrl, { next: { revalidate: 300 } });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const item = Array.isArray(data) ? data[0] : data;
+    if (!item) throw new Error();
+
+    const title = item.title ?? item.question ?? 'Crada Market';
+    const description = item.description
+      ? item.description.slice(0, 160)
       : `View this prediction market on Crada — ${title}`;
     const url = `https://crada.fun/market/${id}`;
 
     let prob = 50;
-    try { prob = Math.round(parseFloat(JSON.parse(market.outcomePrices ?? '["0.5"]')[0]) * 100); } catch {}
+    try {
+      if (isEvent) {
+        const firstMarket = item.markets?.[0];
+        const prices = JSON.parse(firstMarket?.outcomePrices ?? '["0.5"]');
+        prob = Math.round(parseFloat(prices[0]) * 100);
+      } else {
+        const prices = JSON.parse(item.outcomePrices ?? '["0.5"]');
+        prob = Math.round(parseFloat(prices[0]) * 100);
+      }
+    } catch {}
 
-    const ogImage = `https://crada.fun/api/og/market?question=${encodeURIComponent(title)}&probability=${prob}&volume=${market.volumeNum ?? 0}&image=${encodeURIComponent(market.image ?? '')}&source=polymarket`;
+    const volume = isEvent
+      ? parseFloat(item.volume || '0')
+      : parseFloat(item.volumeNum || '0');
+
+    const image = item.image ?? '';
+
+    const ogImage = `https://crada.fun/api/og/market?question=${encodeURIComponent(title)}&probability=${prob}&volume=${volume}&image=${encodeURIComponent(image)}&source=polymarket`;
 
     return {
       title,
