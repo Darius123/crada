@@ -123,7 +123,9 @@ export async function GET() {
           category,
           endDate: m.endDateIso || '',
           image: m.image || m.icon || null,
-          tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : 'https://polymarket.com',
+          tradeUrl: m.events?.[0]?.slug
+        ? `https://polymarket.com/event/${m.events[0].slug}`
+        : `https://polymarket.com/?s=${encodeURIComponent(m.question || '')}`,
           priceChange,
           spread: m.spread != null ? parseFloat(m.spread) : null,
         };

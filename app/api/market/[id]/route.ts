@@ -61,7 +61,7 @@ async function fetchBinaryMarket(id: string) {
     prob = parseFloat(prices[0]);
   } catch {}
 
-  const eventSlug = m.events?.[0]?.slug || m.slug || null;
+  const eventSlug = m.events?.[0]?.slug || null;
   let clobTokenId: string | null = null;
   try {
     const ids = JSON.parse(m.clobTokenIds || '[]');
@@ -77,7 +77,9 @@ async function fetchBinaryMarket(id: string) {
     category: detectCategory(m.question),
     endDate: m.endDateIso || '',
     description: m.description || '',
-    tradeUrl: eventSlug ? `https://polymarket.com/event/${eventSlug}` : 'https://polymarket.com',
+    tradeUrl: eventSlug
+      ? `https://polymarket.com/event/${eventSlug}`
+      : `https://polymarket.com/?s=${encodeURIComponent(m.question || '')}`,
     clobTokenId,
   };
 }
