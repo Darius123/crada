@@ -249,9 +249,7 @@ export default function MarketPage() {
 
     const selIdx = Math.min(selectedOutcome, market.outcomes.length - 1);
     const selectedOutcomeData = market.outcomes[selIdx];
-    const selectedTradeLink = selectedOutcomeData.slug
-      ? `https://polymarket.com/event/${selectedOutcomeData.slug}`
-      : market.tradeUrl || 'https://polymarket.com';
+    const selectedTradeLink = market.tradeUrl || 'https://polymarket.com';
     const selectedPayout = amountNum > 0 && selectedOutcomeData.probability > 0
       ? (amountNum / selectedOutcomeData.probability).toFixed(2)
       : '—';
@@ -441,9 +439,7 @@ export default function MarketPage() {
                     const oPct = Math.round(o.probability * 100);
                     const color = colors[i % colors.length];
                     const bg = bgColors[i % bgColors.length];
-                    const tradeLink = o.slug
-                      ? `https://polymarket.com/event/${o.slug}`
-                      : market.tradeUrl || 'https://polymarket.com';
+                    const tradeLink = market.tradeUrl || 'https://polymarket.com';
                     return (
                       <div key={i} className="flex items-center gap-3">
                         <span className="text-[11px] font-bold w-5 text-right flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>{i + 1}</span>
@@ -721,7 +717,7 @@ export default function MarketPage() {
         >
           <div className="flex gap-3">
             <a
-              href={leader.slug ? `https://polymarket.com/event/${leader.slug}` : market.tradeUrl || 'https://polymarket.com'}
+              href={market.tradeUrl || 'https://polymarket.com'}
               target="_blank"
               rel="noreferrer"
               className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
@@ -730,7 +726,7 @@ export default function MarketPage() {
               {leader.name.length > 12 ? leader.name.slice(0, 12) + '…' : leader.name} · {leaderPct}%
             </a>
             <a
-              href={second.slug ? `https://polymarket.com/event/${second.slug}` : market.tradeUrl || 'https://polymarket.com'}
+              href={market.tradeUrl || 'https://polymarket.com'}
               target="_blank"
               rel="noreferrer"
               className="flex-1 py-3.5 rounded-xl text-center text-sm font-bold"
