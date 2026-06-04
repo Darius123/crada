@@ -1,51 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { setSubscription, setEmailToUser, Plan } from '@/lib/redis';
+import { setSubscription, setEmailToUser, getSubscription } from '@/lib/redis';
+import type { Plan } from '@/lib/redis';
+
+const VARIANT_PLAN_MAP: Record<string, Plan> = {
+  '1744229': 'pro',
+  '1744204': 'pro',
+  '1744255': 'max',
+  '1744251': 'max',
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { reference, userId } = await req.json();
+    const { orderId, userId } = await req.json();
 
-    if (!reference || !userId) {
-      return NextResponse.json({ error: 'Missing reference or userId' }, { status: 400 });
+    if (!orderId || !userId) {
+      return NextResponse.json({ error: 'Missing orderId or userId' }, { status: 400 });
     }
 
-    const res = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+    const res = await fetch(`https://api.lemonsqueezy.com/v1/orders/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.LEMONSQUEEZY_API_KEY}`,
+        Accept: 'application/vnd.api+json',
+      },
     });
 
     const data = await res.json();
-    if (!data.status || data.data.status !== 'success') {
-      return NextResponse.json({ error: 'Payment not successful' }, { status: 400 });
+    const attrs = data?.data?.attributes;
+    if (!attrs || attrs.status !== 'paid') {
+      return NextResponse.json({ error: 'Order not paid' }, { status: 400 });
     }
 
-    const tx = data.data;
-    const planCode = tx.plan?.plan_code ?? tx.plan_object?.plan_code ?? '';
+    const variantId = String(attrs.first_order_item?.variant_id ?? '');
+    const plan: Plan = VARIANT_PLAN_MAP[variantId] ?? 'free';
+    const email: string = attrs.user_email ?? '';
 
-    const maxCodes = [
-      process.env.NEXT_PUBLIC_PAYSTACK_MAX_PLAN,
-      process.env.NEXT_PUBLIC_PAYSTACK_MAX_ANNUAL_PLAN,
-    ];
-    const proCodes = [
-      process.env.NEXT_PUBLIC_PAYSTACK_PRO_PLAN,
-      process.env.NEXT_PUBLIC_PAYSTACK_PRO_ANNUAL_PLAN,
-    ];
-
-    const plan: Plan =
-      maxCodes.includes(planCode) ? 'max'
-      : proCodes.includes(planCode) ? 'pro'
-      : 'free';
-
+    const existing = await getSubscription(userId);
     const subscription = {
+      ...(existing ?? {}),
       plan,
-      planCode,
-      customerCode: tx.customer?.customer_code ?? '',
-      subscriptionCode: tx.subscription?.subscription_code ?? tx.subscription_code ?? '',
-      email: tx.customer?.email ?? '',
-      createdAt: Date.now(),
+      planCode: variantId,
+      customerCode: String(attrs.customer_id ?? ''),
+      subscriptionCode: '',
+      email,
+      createdAt: existing?.createdAt ?? Date.now(),
     };
 
     await setSubscription(userId, subscription);
-    if (subscription.email) await setEmailToUser(subscription.email, userId);
+    if (email) await setEmailToUser(email, userId);
 
     return NextResponse.json({ plan });
   } catch (err) {
